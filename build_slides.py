@@ -1,0 +1,1065 @@
+"""
+Generate the complete revision-supervisee.html with all 140+ slides.
+Run: python build_slides.py
+"""
+from __future__ import annotations
+import json
+from pathlib import Path
+
+OUT = Path(__file__).resolve().parent / "revision-supervisee-complete.html"
+
+# --- CSS/JS/Header identical to revision-supervisee.html but extended ---
+HEADER = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revision Classification Supervisee — SupCom 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><!-- --></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"><!-- --></script>
+<style>
+:root{--primary:#1e40af;--primary-dark:#1e3a8a;--accent-green:#10b981;--accent-orange:#f59e0b;
+--accent-purple:#7c3aed;--accent-cyan:#06b6d4;--accent-red:#ef4444;--text-main:#1e293b;
+--text-muted:#64748b;--bg-main:#f8fafc;--bg-card:#ffffff;--border-light:#e2e8f0;
+--glass-border:rgba(30,64,175,0.08);--shadow-sm:0 1px 3px rgba(0,0,0,0.04);
+--shadow-md:0 4px 12px rgba(0,0,0,0.06);--shadow-lg:0 10px 30px rgba(0,0,0,0.08);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-main);color:var(--text-main);overflow:hidden;height:100vh;}
+header{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(255,255,255,0.98);
+  backdrop-filter:blur(20px);border-bottom:2px solid rgba(30,64,175,0.1);
+  box-shadow:0 4px 20px rgba(0,0,0,0.08);display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;padding:0 2rem;z-index:100;}
+.header-center{justify-self:center;text-align:center;}
+.logo{font-family:'Outfit';font-weight:700;font-size:1rem;color:var(--text-main);}
+.logo-sub{display:block;font-size:0.65rem;font-weight:400;color:var(--text-muted);letter-spacing:0.5px;}
+.slide{position:absolute;top:56px;left:0;right:0;bottom:48px;display:flex;align-items:center;
+  justify-content:center;opacity:0;transform:translateX(60px);
+  transition:all 0.45s cubic-bezier(0.16,1,0.3,1);pointer-events:none;padding:1rem 2rem;
+  overflow-y:auto;}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all;}
+.slide.prev{opacity:0;transform:translateX(-60px);}
+.content-single{width:100%;max-width:1050px;}
+.content-wide{width:100%;max-width:1200px;}
+.slide-header{margin-bottom:0.8rem;padding-bottom:0.5rem;border-bottom:2px solid var(--glass-border);}
+.slide-title{font-family:'Outfit';font-weight:800;font-size:1.6rem;color:var(--text-main);letter-spacing:-0.02em;}
+.section-badge{display:inline-block;padding:0.2rem 0.6rem;background:rgba(30,64,175,0.08);color:var(--primary);
+  border-radius:20px;font-size:0.7rem;font-weight:600;margin-bottom:0.3rem;letter-spacing:0.5px;}
+.section-badge.exo{background:rgba(16,185,129,0.1);color:var(--accent-green);}
+.section-badge.correction{background:rgba(239,68,68,0.1);color:var(--accent-red);}
+.section-badge.svm{background:rgba(124,58,237,0.1);color:var(--accent-purple);}
+.section-badge.knn{background:rgba(16,185,129,0.1);color:var(--accent-green);}
+.section-badge.bayes{background:rgba(245,158,11,0.1);color:var(--accent-orange);}
+.section-badge.eval{background:rgba(6,182,212,0.1);color:var(--accent-cyan);}
+.section-badge.tree{background:rgba(30,64,175,0.1);color:var(--primary);}
+.section-badge.logreg{background:rgba(245,158,11,0.1);color:var(--accent-orange);}
+.level-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.6rem;font-weight:700;margin-left:0.4rem;}
+.level-easy{background:rgba(16,185,129,0.12);color:#059669;}
+.level-medium{background:rgba(245,158,11,0.12);color:#d97706;}
+.level-hard{background:rgba(239,68,68,0.12);color:#dc2626;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;padding:1rem;box-shadow:var(--shadow-sm);}
+.card h3{font-family:'Outfit';font-weight:700;font-size:1rem;margin-bottom:0.4rem;}
+.card p,.card li{font-size:0.85rem;color:var(--text-muted);line-height:1.5;}
+.formula-box{background:rgba(30,64,175,0.03);border:2px solid rgba(30,64,175,0.12);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.formula-box .title{font-family:'Outfit';font-weight:700;font-size:0.85rem;margin-bottom:0.5rem;color:var(--primary);}
+.exo-box{background:rgba(16,185,129,0.03);border:2px solid rgba(16,185,129,0.15);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.exo-box .exo-title{font-family:'Outfit';font-weight:700;font-size:0.95rem;color:var(--accent-green);margin-bottom:0.5rem;}
+.correction-box{background:rgba(239,68,68,0.02);border:2px solid rgba(239,68,68,0.12);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.correction-box .corr-title{font-family:'Outfit';font-weight:700;font-size:0.95rem;color:var(--accent-red);margin-bottom:0.5rem;}
+.step-row{display:flex;align-items:flex-start;gap:0.5rem;margin:0.4rem 0;}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Fira Code';font-weight:700;font-size:0.8rem;color:white;flex-shrink:0;background:var(--primary);}
+.step-text{font-size:0.85rem;line-height:1.6;}
+table{width:100%;border-collapse:collapse;margin:0.7rem 0;font-size:0.85rem;}
+th{background:var(--primary);color:white;padding:0.5rem 0.7rem;text-align:center;font-weight:600;font-size:0.75rem;}
+td{padding:0.4rem 0.7rem;text-align:center;border:1px solid var(--border-light);}
+tr:nth-child(even){background:rgba(30,64,175,0.02);}
+.info-box{background:rgba(6,182,212,0.05);border-left:4px solid var(--accent-cyan);padding:0.7rem 1rem;
+  border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.warning-box{background:rgba(245,158,11,0.05);border-left:4px solid var(--accent-orange);padding:0.7rem 1rem;
+  border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.success-box{background:rgba(16,185,129,0.05);border-left:4px solid var(--accent-green);padding:0.7rem 1rem;
+  border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.result-highlight{font-family:'Fira Code';background:rgba(124,58,237,0.08);padding:0.12rem 0.4rem;
+  border-radius:5px;font-weight:600;color:var(--accent-purple);}
+.hero-title{font-family:'Outfit';font-weight:900;font-size:2.5rem;line-height:1.1;color:var(--text-main);letter-spacing:-0.03em;}
+.hero-title .accent{background:linear-gradient(135deg,var(--accent-green),var(--primary));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-subtitle{font-size:1rem;color:var(--text-muted);max-width:700px;margin:0.8rem auto;line-height:1.6;}
+.text-center{text-align:center;}
+.text-small{font-size:0.8rem;color:var(--text-muted);}
+.mb-1{margin-bottom:0.5rem;}.mb-2{margin-bottom:1rem;}.mt-1{margin-top:0.5rem;}.mt-2{margin-top:1rem;}
+.keyword{color:var(--accent-purple);font-weight:600;}
+.answer{color:var(--accent-green);font-weight:600;}
+nav{position:fixed;bottom:0;left:0;right:0;height:48px;background:rgba(255,255,255,0.98);
+  backdrop-filter:blur(20px);border-top:2px solid rgba(30,64,175,0.1);display:flex;
+  align-items:center;justify-content:center;gap:1rem;z-index:100;padding:0 1.5rem;}
+nav button{background:var(--primary);color:white;border:none;padding:0.35rem 1rem;border-radius:8px;
+  cursor:pointer;font-family:'Inter';font-weight:600;font-size:0.75rem;transition:all 0.2s;}
+nav button:hover{background:var(--primary-dark);}
+nav button:disabled{opacity:0.3;cursor:default;}
+nav .page-indicator{font-family:'Fira Code';font-size:0.8rem;color:var(--text-muted);}
+nav .progress-bar{width:180px;height:5px;background:var(--border-light);border-radius:3px;overflow:hidden;}
+nav .progress-fill{height:100%;background:var(--primary);border-radius:3px;transition:width 0.3s;}
+@media(max-width:768px){.slide{padding:0.6rem 0.8rem;}.grid-2,.grid-3{grid-template-columns:1fr;}.slide-title{font-size:1.2rem;}.hero-title{font-size:1.6rem;}}
+</style>
+</head>
+<body>
+<header>
+<div style="justify-self:start"></div>
+<div class="header-center"><span class="logo">Classification Supervisee</span><span class="logo-sub">REVISION EXAMEN — SUPCOM DOCTORAT 2026</span></div>
+<div style="justify-self:end;font-size:0.75rem;color:var(--text-muted);">M. Riadh ABDELFATTAH</div>
+</header>
+<div id="slide-container">
+"""
+
+FOOTER = """</div>
+<nav>
+<button onclick="prevSlide()" id="btn-prev">← Slide precedent</button>
+<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+<span class="page-indicator"><span id="current-slide">1</span> / <span id="total-slides">N</span></span>
+<button onclick="nextSlide()" id="btn-next">Slide suivant →</button>
+</nav>
+<script>
+const slides=document.querySelectorAll('.slide');const totalSlides=slides.length;
+let currentSlide=0;
+document.getElementById('total-slides').textContent=totalSlides;
+function updateSlide(){
+  slides.forEach((s,i)=>{
+    s.classList.remove('active','prev');
+    if(i===currentSlide)s.classList.add('active');
+    else if(i<currentSlide)s.classList.add('prev');
+  });
+  document.getElementById('current-slide').textContent=currentSlide+1;
+  document.getElementById('progress-fill').style.width=((currentSlide+1)/totalSlides*100)+'%';
+  document.getElementById('btn-prev').disabled=currentSlide===0;
+  document.getElementById('btn-next').disabled=currentSlide===totalSlides-1;
+}
+function nextSlide(){if(currentSlide<totalSlides-1){currentSlide++;updateSlide();}}
+function prevSlide(){if(currentSlide>0){currentSlide--;updateSlide();}}
+document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();nextSlide();}else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prevSlide();}else if(e.key==='Home'){e.preventDefault();currentSlide=0;updateSlide();}else if(e.key==='End'){e.preventDefault();currentSlide=totalSlides-1;updateSlide();}});
+updateSlide();
+</script>
+</body></html>"""
+
+
+def badge(t, text=""):
+    bmap = {"svm":"svm","knn":"knn","bayes":"bayes","eval":"eval","tree":"tree","logreg":"logreg","exo":"exo","correction":"correction"}
+    bc = bmap.get(t, "")
+    return f'<span class="section-badge {bc}">{text or t.upper()}</span>'
+
+def level(l):
+    lm = {"facile":"level-easy","Facile":"level-easy","moyen":"level-medium","Moyen":"level-medium"}
+    return f'<span class="level-badge {lm.get(l,'level-medium')}">{l.upper()}</span>'
+
+def exo_header(num, topic, title, lev):
+    return f"""<div class="slide-header">{badge(topic)}{badge("exo","EXERCICE")}{level(lev)}
+<div class="slide-title">Exercice {num} — {title}</div></div>"""
+
+def corr_header(num, topic, title):
+    return f"""<div class="slide-header">{badge(topic)}{badge("correction","CORRECTION")}
+<div class="slide-title">Correction {num} — {title}</div></div>"""
+
+def slide(content, sid=""):
+    return f'<div class="slide" id="s{sid}"><div class="content-single">{content}</div></div>\n'
+
+def slide_wide(content, sid=""):
+    return f'<div class="slide" id="s{sid}"><div class="content-wide">{content}</div></div>\n'
+
+S = []  # slides accumulator
+sid = [0]
+def add(content, wide=False):
+    sid[0] += 1
+    S.append(slide_wide(content, str(sid[0])) if wide else slide(content, str(sid[0])))
+
+# ===========================================================================
+# SLIDES
+# ===========================================================================
+
+# --- TITLE ---
+add("""<div class="text-center">
+<div class="hero-title">Revision <span class="accent">Classification Supervisee</span></div>
+<div class="hero-subtitle">KNN • Bayes • SVM • Regression Logistique • Arbres de Decision<br>Matrice de Confusion • Sensibilite • Specificite</div>
+<div class="text-small mt-2">32 exercices corriges pas a pas — Niveaux Facile & Moyen<br>Base sur les annales 2021 & 2023 — M. Riadh ABDELFATTAH</div>
+<div class="mt-2"><span class="section-badge">Utilisez les fleches ← → ou Espace pour naviguer</span></div>
+</div>""")
+
+# --- TOC ---
+add(f"""<div class="slide-header">{badge("exo","PLAN")}<div class="slide-title">Sommaire de la revision</div></div>
+<div class="grid-3">
+<div class="card"><h3>Partie 1 — SVM</h3><p>7 exercices : hyperplan, calcul de w, classification, marge, support vectors, soft margin</p></div>
+<div class="card"><h3>Partie 2 — KNN</h3><p>6 exercices : distance euclidienne, vote majoritaire, choix de K, normalisation</p></div>
+<div class="card"><h3>Partie 3 — Bayes naif</h3><p>5 exercices : probabilites conditionnelles, cotes (odds), classification</p></div>
+<div class="card"><h3>Partie 4 — Evaluation</h3><p>6 exercices : matrice de confusion, sensibilite, specificite, F1-score, precision</p></div>
+<div class="card"><h3>Partie 5 — Regression Logistique</h3><p>4 exercices : sigmoide, frontiere de decision, odds ratio</p></div>
+<div class="card"><h3>Partie 6 — Arbre de Decision</h3><p>4 exercices : entropie, gain d'information, choix de split</p></div>
+</div>
+<div class="info-box mt-2">Chaque exercice est suivi d'une <strong>correction detaillee etape par etape</strong> sur le slide suivant.</div>""")
+
+# ===================== PARTIE 1: SVM (7 exercices) =====================
+
+# SVM Exo 1
+add(exo_header("1","svm","Trouver l'hyperplan optimal (separation lineaire simple)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On donne les points suivants :</p>
+<table><tr><th>Point</th><th>x<sub>1</sub></th><th>x<sub>2</sub></th><th>Classe y</th></tr>
+<tr><td>A</td><td>0</td><td>0</td><td>-1</td></tr>
+<tr><td>B</td><td>4</td><td>0</td><td>+1</td></tr>
+<tr><td>C</td><td>0</td><td>3</td><td>-1</td></tr>
+<tr><td>D</td><td>4</td><td>3</td><td>+1</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Ces donnees sont-elles lineairement separables ?</p>
+<p><strong>2.</strong> Proposer un hyperplan de separation (trouver w et b).</p>
+<p><strong>3.</strong> Donner les vecteurs supports.</p>
+</div>""")
+
+# SVM Correction 1
+add(corr_header("1","svm","Hyperplan optimal (separation lineaire simple)") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Visualisation :</strong> Les points A(0,0) et C(0,3) sont classe -1. Les points B(4,0) et D(4,3) sont classe +1. La separation est verticale : tous les points a gauche (x<sub>1</sub>=0) sont negatifs, tous les points a droite (x<sub>1</sub>=4) sont positifs. Les donnees sont <strong>lineairement separables</strong>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Hyperplan optimal :</strong> La marge maximale est au milieu entre x<sub>1</sub>=0 et x<sub>1</sub>=4, donc a x<sub>1</sub>=2. L'hyperplan est <span class="result-highlight">x<sub>1</sub> - 2 = 0</span>. Donc w = (1, 0) et b = -2.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Vecteurs supports :</strong> Les points les plus proches de la frontiere x<sub>1</sub>=2 sont A(0,0) distance 2, B(4,0) distance 2, C(0,3) distance 2, D(4,3) distance 2. Tous les 4 points sont equidistants. En SVM, les vecteurs supports sont les points qui definissent la marge. Ici : <span class="result-highlight">A, B, C, D</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Verification :</strong> Pour A(0,0) : f = 0 - 2 = -2 → negatif → classe -1 ✓. Pour B(4,0) : f = 4 - 2 = +2 → positif → classe +1 ✓.</div></div>
+</div>
+<div class="success-box"><strong>Reponse finale :</strong> Hyperplan x<sub>1</sub> - 2 = 0, w = (1, 0), b = -2. Tous les points sont vecteurs supports.</div>""")
+
+# SVM Exo 2
+add(exo_header("2","svm","Calcul de w a partir des alpha (type annales 2023)","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On considere 4 points d'apprentissage avec les multiplicateurs de Lagrange obtenus apres optimisation du SVM dual :</p>
+<table><tr><th>Point</th><th>x<sub>1</sub></th><th>x<sub>2</sub></th><th>y</th><th>&alpha;<sub>i</sub></th></tr>
+<tr><td>X<sub>1</sub></td><td>-3</td><td>1</td><td>-1</td><td>1/9</td></tr>
+<tr><td>X<sub>2</sub></td><td>3</td><td>0</td><td>+1</td><td>1/3</td></tr>
+<tr><td>X<sub>3</sub></td><td>1</td><td>-3</td><td>-1</td><td>1/3</td></tr>
+<tr><td>X<sub>4</sub></td><td>0</td><td>3</td><td>+1</td><td>1/27</td></tr></table>
+<p class="mt-1">On donne aussi <strong>b = -1/2</strong>.</p>
+<p><strong>1.</strong> Calculer le vecteur w.</p>
+<p><strong>2.</strong> Donner l'equation de l'hyperplan.</p>
+<p><strong>3.</strong> Classer le nouveau point X<sub>5</sub> = (2, 0).</p>
+<p><strong>4.</strong> Quels sont les vecteurs supports ?</p>
+</div>""")
+
+# SVM Correction 2
+add(corr_header("2","svm","Calcul de w a partir des alpha") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Formule :</strong> w = &Sigma; &alpha;<sub>i</sub> y<sub>i</sub> x<sub>i</sub>. On calcule chaque contribution.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">X<sub>1</sub> : (1/9) &times; (-1) &times; (-3, 1) = (3/9, -1/9) = <strong>(1/3, -1/9)</strong></div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">X<sub>2</sub> : (1/3) &times; (+1) &times; (3, 0) = <strong>(1, 0)</strong></div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">X<sub>3</sub> : (1/3) &times; (-1) &times; (1, -3) = <strong>(-1/3, 1)</strong></div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text">X<sub>4</sub> : (1/27) &times; (+1) &times; (0, 3) = <strong>(0, 1/9)</strong></div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text"><strong>Somme :</strong> w<sub>1</sub> = 1/3 + 1 - 1/3 + 0 = <span class="result-highlight">1</span>. w<sub>2</sub> = -1/9 + 0 + 1 + 1/9 = <span class="result-highlight">1</span>. Donc <span class="result-highlight">w = (1, 1)</span>.</div></div>
+<div class="step-row"><div class="step-num">7</div><div class="step-text"><strong>Hyperplan :</strong> x<sub>1</sub> + x<sub>2</sub> - 1/2 = 0, soit <span class="result-highlight">x<sub>1</sub> + x<sub>2</sub> = 1/2</span>.</div></div>
+<div class="step-row"><div class="step-num">8</div><div class="step-text"><strong>Classification de X<sub>5</sub> = (2, 0) :</strong> f(X<sub>5</sub>) = 2 + 0 - 1/2 = 1.5 > 0 → <span class="result-highlight">Classe +1</span>.</div></div>
+<div class="step-row"><div class="step-num">9</div><div class="step-text"><strong>Vecteurs supports :</strong> X<sub>2</sub> et X<sub>3</sub> ont les plus grands &alpha; (=1/3). X<sub>1</sub> (&alpha;=1/9) est aussi vecteur support. X<sub>4</sub> (&alpha;=1/27) est negligeable. VS = {<span class="result-highlight">X<sub>1</sub>, X<sub>2</sub>, X<sub>3</sub></span>}.</div></div>
+</div>""")
+
+# SVM Exo 3
+add(exo_header("3","svm","SVM avec marge — verification des equations canoniques","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un SVM lineaire a ete entraine. L'hyperplan trouve est :</p>
+<p class="text-center"><strong>x<sub>1</sub> + 2x<sub>2</sub> - 3 = 0</strong></p>
+<p><strong>1.</strong> Donner w et b.</p>
+<p><strong>2.</strong> Ecrire les equations des deux hyperplans de marge (les frontieres ou f(x) = +1 et f(x) = -1).</p>
+<p><strong>3.</strong> Calculer la largeur de la marge.</p>
+<p><strong>4.</strong> Les points P(1, 1) et Q(3, -1) sont-ils bien classes ? Sont-ils dans la marge ?</p>
+</div>""")
+
+# SVM Correction 3
+add(corr_header("3","svm","Marge et equations canoniques") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>w et b :</strong> f(x) = w<sub>1</sub>x<sub>1</sub> + w<sub>2</sub>x<sub>2</sub> + b = 0. Donc <span class="result-highlight">w = (1, 2), b = -3</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Hyperplans de marge :</strong> Marge +1 : x<sub>1</sub> + 2x<sub>2</sub> - 3 = +1 → <span class="result-highlight">x<sub>1</sub> + 2x<sub>2</sub> = 4</span>. Marge -1 : x<sub>1</sub> + 2x<sub>2</sub> - 3 = -1 → <span class="result-highlight">x<sub>1</sub> + 2x<sub>2</sub> = 2</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Largeur de la marge :</strong> ||w|| = &radic;(1 + 4) = &radic;5. Largeur = 2/||w|| = <span class="result-highlight">2/&radic;5 &asymp; 0.894</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>P(1, 1) :</strong> f = 1 + 2 - 3 = 0. Le point est <strong>exactement sur l'hyperplan</strong> (ni positif, ni negatif).</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Q(3, -1) :</strong> f = 3 - 2 - 3 = -2. f < 0 → classe -1. Le point est <strong>au-dela de la marge negative</strong> (car f = -2 < -1).</div></div>
+</div>
+<div class="warning-box"><strong>A retenir :</strong> Un point est dans la marge si -1 &lt; f(x) &lt; +1. En dehors si |f(x)| &ge; 1.</div>""")
+
+# SVM Exo 4
+add(exo_header("4","svm","SVM non lineaire — Kernel Trick (QCM)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> A quoi sert le kernel trick en SVM ?</p>
+<p><strong>2.</strong> Donner la difference entre SVM lineaire et SVM non lineaire.</p>
+<p><strong>3.</strong> Parmi ces noyaux, lesquels sont utilises en SVM : (a) lineaire, (b) polynomial, (c) RBF/Gaussien, (d) sigmoide ?</p>
+<p><strong>4.</strong> Quel est l'avantage principal de la formulation duale du SVM ?</p>
+</div>""")
+
+# SVM Correction 4
+add(corr_header("4","svm","Kernel Trick et SVM non lineaire") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Le kernel trick permet de <strong>projeter implicitement</strong> les donnees dans un espace de plus grande dimension sans calculer explicitement la transformation. Cela permet de trouver des <strong>frontieres non lineaires</strong> tout en gardant la complexite d'un SVM lineaire. On remplace le produit scalaire x<sub>i</sub>&middot;x<sub>j</sub> par K(x<sub>i</sub>, x<sub>j</sub>).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">SVM lineaire : frontiere = droite/hyperplan. Utilise quand les donnees sont lineairement separables. SVM non lineaire : utilise un noyau pour creer des frontieres courbes. Adapte aux donnees non separables lineairement.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Tous sont des noyaux SVM valides :</strong> (a) lineaire K(x,z)=x&middot;z, (b) polynomial K(x,z)=(x&middot;z + c)<sup>d</sup>, (c) RBF/Gaussien K(x,z)=exp(-||x-z||<sup>2</sup>/2&sigma;<sup>2</sup>), (d) sigmoide K(x,z)=tanh(&kappa; x&middot;z + &theta;). Le RBF est le plus utilise en pratique.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">La formulation duale permet : (a) le <strong>kernel trick</strong> (remplacer les produits scalaires par un noyau), et (b) de n'avoir besoin que des <strong>produits scalaires</strong> entre points (pas des points eux-memes), ce qui rend possible la classification non lineaire.</div></div>
+</div>""")
+
+# SVM Exo 5
+add(exo_header("5","svm","Classification d'un nouveau point (type 2021)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Soit 3 points d'apprentissage :</p>
+<table><tr><th>Point</th><th>x<sub>1</sub></th><th>x<sub>2</sub></th><th>y</th></tr>
+<tr><td>X<sub>1</sub></td><td>4</td><td>3</td><td>+1</td></tr>
+<tr><td>X<sub>2</sub></td><td>0</td><td>2</td><td>+1</td></tr>
+<tr><td>X<sub>3</sub></td><td>0</td><td>0</td><td>-1</td></tr></table>
+<p class="mt-1">L'hyperplan optimal est <strong>x<sub>2</sub> - 1 = 0</strong> (w = (0, 1), b = -1).</p>
+<p><strong>1.</strong> Classer le nouveau point N = (5, 0.5).</p>
+<p><strong>2.</strong> Classer le nouveau point M = (2, 1).</p>
+<p><strong>3.</strong> Identifier les vecteurs supports.</p>
+<p><strong>4.</strong> Calculer &alpha;<sub>2</sub> et &alpha;<sub>3</sub> sachant que &alpha;<sub>1</sub> = 0.</p>
+</div>""")
+
+# SVM Correction 5
+add(corr_header("5","svm","Classification nouveau point — Type examen 2021") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>N = (5, 0.5) :</strong> f(N) = 0 &times; 5 + 1 &times; 0.5 - 1 = 0.5 - 1 = <strong>-0.5 < 0</strong> → <span class="result-highlight">Classe -1</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>M = (2, 1) :</strong> f(M) = 0 &times; 2 + 1 &times; 1 - 1 = 0. Le point est <span class="result-highlight">exactement sur l'hyperplan</span> (cas ambigu).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Vecteurs supports :</strong> Les marges sont x<sub>2</sub> = 0 (marge -1) et x<sub>2</sub> = 2 (marge +1). X<sub>3</sub>(0,0) est sur la marge -1 avec y=-1. X<sub>2</sub>(0,2) est sur la marge +1 avec y=+1. Donc <span class="result-highlight">X<sub>2</sub> et X<sub>3</sub></span> sont vecteurs supports. X<sub>1</sub>(4,3) est a l'interieur (f = 2, > 1).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Calcul des &alpha; :</strong> w = (0, 1) = &Sigma; &alpha;<sub>i</sub> y<sub>i</sub> x<sub>i</sub>. &alpha;<sub>1</sub>=0 car X<sub>1</sub> n'est pas VS. Donc (0,1) = &alpha;<sub>2</sub>(1)(0,2) + &alpha;<sub>3</sub>(-1)(0,0) = (0, 2&alpha;<sub>2</sub>). Donc 2&alpha;<sub>2</sub> = 1 → <span class="result-highlight">&alpha;<sub>2</sub> = 1/2</span>. Pour &alpha;<sub>3</sub> : condition &Sigma;&alpha;<sub>i</sub>y<sub>i</sub> = 0 → &alpha;<sub>2</sub>(1) + &alpha;<sub>3</sub>(-1) = 0 → <span class="result-highlight">&alpha;<sub>3</sub> = 1/2</span>.</div></div>
+</div>""")
+
+# SVM Exo 6
+add(exo_header("6","svm","Hard margin vs Soft margin","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Expliquer la difference entre SVM a marge dure (hard margin) et SVM a marge souple (soft margin).</p>
+<p><strong>2.</strong> Quel probleme le SVM soft margin resout-il ?</p>
+<p><strong>3.</strong> Que se passe-t-il si on choisit C = 0.01 ? Et si C = 10000 ?</p>
+<p><strong>4.</strong> On a 6 points, dont un mal classe par l'hyperplan optimal (point outlier). Avec C tres grand, que fait le SVM ?</p>
+</div>""")
+
+# SVM Correction 6
+add(corr_header("6","svm","Hard margin vs Soft margin") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Hard margin :</strong> suppose les donnees <strong>lineairement separables</strong>, aucune erreur toleree. Tous les points doivent etre du bon cote de la marge. <strong>Soft margin :</strong> accepte des <strong>violations de marge</strong> via des variables de relachement &xi;<sub>i</sub>. Permet de traiter des donnees non parfaitement separables.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Le soft margin resout le probleme des <strong>outliers</strong> (points aberrants) et des <strong>donnees non lineairement separables</strong>. Sans soft margin, un seul point mal place peut empecher toute solution.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>C = 0.01 (petit) :</strong> on penalise peu les erreurs → <strong>marge large</strong>, on accepte beaucoup d'erreurs de classification. Risque de <strong>sous-apprentissage</strong>. <strong>C = 10000 (grand) :</strong> on penalise fortement les erreurs → <strong>marge etroite</strong>, tend vers le hard margin. Risque de <strong>sur-apprentissage</strong> si des outliers sont presents.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Avec C tres grand, le SVM va <strong>deformer la frontiere</strong> pour essayer de bien classer l'outlier, au risque de reduire fortement la marge et de moins bien generaliser. Le modele devient trop sensible aux points extremes.</div></div>
+</div>""")
+
+# SVM Exo 7
+add(exo_header("7","svm","Dimension de l'espace et noyau RBF","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On a un dataset 2D non lineairement separable (cercles concentriques).</p>
+<p><strong>1.</strong> Pourquoi un SVM lineaire echoue-t-il sur ce dataset ?</p>
+<p><strong>2.</strong> Expliquer comment le noyau RBF (Gaussien) peut separer ces donnees.</p>
+<p><strong>3.</strong> Le parametre &sigma; du noyau RBF : que se passe-t-il si &sigma; est tres petit ? Tres grand ?</p>
+<p><strong>4.</strong> Avec un noyau polynomial de degre 2, quelle forme prend la frontiere de decision ?</p>
+</div>""")
+
+# SVM Correction 7
+add(corr_header("7","svm","Noyau RBF et donnees non lineaires") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Un SVM lineaire cherche un hyperplan (une droite en 2D). Pour des cercles concentriques, <strong>aucune droite ne peut separer</strong> les deux classes. Les donnees sont non lineairement separables dans l'espace d'origine.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Le noyau RBF K(x,z) = exp(-||x-z||<sup>2</sup>/2&sigma;<sup>2</sup>) projette <strong>implicitement</strong> les donnees dans un espace de <strong>dimension infinie</strong>. Dans cet espace, les cercles deviennent lineairement separables. La frontiere dans l'espace d'origine est un <strong>cercle</strong> (ou contours complexes).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>&sigma; tres petit :</strong> chaque point d'apprentissage a une influence tres locale → frontiere <strong>tres complexe</strong>, risque de <strong>sur-apprentissage</strong>. <strong>&sigma; tres grand :</strong> le noyau devient presque constant → se comporte comme un <strong>classifieur lineaire</strong>, risque de <strong>sous-apprentissage</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Avec un noyau polynomial de degre 2 : K(x,z) = (x&middot;z + c)<sup>2</sup>. La frontiere dans l'espace d'origine est une <strong>conique</strong> (ellipse, parabole, hyperbole), ce qui permet de separer des donnees circulaires ou quadratiques.</div></div>
+</div>""")
+
+# ===================== PARTIE 2: KNN (6 exercices) =====================
+
+# KNN Exo 1
+add(exo_header("8","knn","Classification KNN basique (K=3)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On dispose des points d'apprentissage suivants :</p>
+<table><tr><th>Point</th><th>x<sub>1</sub></th><th>x<sub>2</sub></th><th>Classe</th></tr>
+<tr><td>E<sub>1</sub></td><td>1</td><td>1</td><td>A</td></tr>
+<tr><td>E<sub>2</sub></td><td>2</td><td>2</td><td>A</td></tr>
+<tr><td>E<sub>3</sub></td><td>4</td><td>1</td><td>B</td></tr>
+<tr><td>E<sub>4</sub></td><td>5</td><td>3</td><td>B</td></tr>
+<tr><td>E<sub>5</sub></td><td>3</td><td>4</td><td>A</td></tr></table>
+<p class="mt-1">On veut classer le point N = <strong>(3, 2)</strong> avec <strong>K = 3</strong>.</p>
+<p><strong>1.</strong> Calculer les distances euclidiennes entre N et chaque point.</p>
+<p><strong>2.</strong> Identifier les 3 plus proches voisins.</p>
+<p><strong>3.</strong> Donner la classe predite pour N.</p>
+</div>""")
+
+# KNN Correction 1
+add(corr_header("8","knn","Classification KNN basique K=3") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Distances euclidiennes :</strong> d(N, E<sub>1</sub>) = &radic;((3-1)<sup>2</sup>+(2-1)<sup>2</sup>) = &radic;(4+1) = <strong>&radic;5 &asymp; 2.24</strong></div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">d(N, E<sub>2</sub>) = &radic;((3-2)<sup>2</sup>+(2-2)<sup>2</sup>) = &radic;(1+0) = <strong>1.00</strong></div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">d(N, E<sub>3</sub>) = &radic;((3-4)<sup>2</sup>+(2-1)<sup>2</sup>) = &radic;(1+1) = <strong>&radic;2 &asymp; 1.41</strong></div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">d(N, E<sub>4</sub>) = &radic;((3-5)<sup>2</sup>+(2-3)<sup>2</sup>) = &radic;(4+1) = <strong>&radic;5 &asymp; 2.24</strong></div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text">d(N, E<sub>5</sub>) = &radic;((3-3)<sup>2</sup>+(2-4)<sup>2</sup>) = &radic;(0+4) = <strong>2.00</strong></div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text"><strong>Tri par distance :</strong> E<sub>2</sub>(1.00, A) < E<sub>3</sub>(1.41, B) < E<sub>5</sub>(2.00, A) < E<sub>1</sub>(2.24, A) < E<sub>4</sub>(2.24, B).</div></div>
+<div class="step-row"><div class="step-num">7</div><div class="step-text">K=3 → les 3 plus proches : <strong>E<sub>2</sub> (A), E<sub>3</sub> (B), E<sub>5</sub> (A)</strong>. Vote : A=2, B=1.</div></div>
+<div class="step-row"><div class="step-num">8</div><div class="step-text"><strong>Classe predite :</strong> <span class="result-highlight">A</span>.</div></div>
+</div>""")
+
+# KNN Exo 2
+add(exo_header("9","knn","Choix de K — impact sur la decision","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On reprend l'exercice precedent (meme N = (3,2), memes donnees).</p>
+<p><strong>1.</strong> Quelle serait la classe predite avec K = 1 ?</p>
+<p><strong>2.</strong> Quelle serait la classe predite avec K = 5 ?</p>
+<p><strong>3.</strong> Quel K semble le plus approprie ici ? Pourquoi ?</p>
+<p><strong>4.</strong> Quel est le risque si K est trop petit ? Si K est trop grand ?</p>
+</div>""")
+
+# KNN Correction 2
+add(corr_header("9","knn","Impact du choix de K") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>K = 1 :</strong> Le plus proche voisin est E<sub>2</sub> (distance 1.00, classe A). Classe predite = <span class="result-highlight">A</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>K = 5 :</strong> Les 5 voisins sont E<sub>2</sub>(A), E<sub>3</sub>(B), E<sub>5</sub>(A), E<sub>1</sub>(A), E<sub>4</sub>(B). Vote : A=3, B=2. Classe predite = <span class="result-highlight">A</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">K=3 ou K=5 donnent A. K=5 est plus robuste car il utilise plus de voisins, reduisant l'effet du bruit. La regle generale : <strong>K impair</strong> pour eviter les egalites, et <strong>K &asymp; &radic;n</strong> (n=5, donc K&asymp;2.2 → K=3 est raisonnable).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>K trop petit :</strong> sensible au bruit, risque de <strong>sur-apprentissage</strong> (frontiere trop complexe). <strong>K trop grand :</strong> decision trop lisse, risque de <strong>sous-apprentissage</strong> (frontiere trop simple). Le cas extreme K=n donne toujours la classe majoritaire.</div></div>
+</div>""")
+
+# KNN Exo 3
+add(exo_header("10","knn","KNN et normalisation","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On a le dataset suivant pour predire une maladie (Oui/Non) a partir de la temperature (en degres Celsius) et du poids (en kg) :</p>
+<table><tr><th>Patient</th><th>Temperature</th><th>Poids (kg)</th><th>Malade</th></tr>
+<tr><td>P<sub>1</sub></td><td>37</td><td>70</td><td>Non</td></tr>
+<tr><td>P<sub>2</sub></td><td>39</td><td>68</td><td>Oui</td></tr>
+<tr><td>P<sub>3</sub></td><td>38</td><td>75</td><td>Non</td></tr>
+<tr><td>P<sub>4</sub></td><td>40</td><td>72</td><td>Oui</td></tr></table>
+<p class="mt-1">Nouveau patient N : temperature = <strong>38.5&deg;C</strong>, poids = <strong>71 kg</strong>. K = 3.</p>
+<p><strong>1.</strong> Pourquoi est-il necessaire de normaliser les donnees ?</p>
+<p><strong>2.</strong> Normaliser en utilisant la normalisation min-max (dans [0, 1]).</p>
+<p><strong>3.</strong> Classer le patient N apres normalisation.</p>
+</div>""")
+
+# KNN Correction 3
+add(corr_header("10","knn","Normalisation en KNN") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Sans normalisation, la distance euclidienne serait dominee par la variable ayant la plus grande echelle (le poids, 68-75 kg vs temperature 37-40&deg;C). La <strong>temperature varierait de 3 unites, le poids de 7 unites</strong>. Le poids aurait plus d'influence, faussant KNN.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Normalisation min-max :</strong> x' = (x - min)/(max - min). Temperature : min=37, max=40. Poids : min=68, max=75.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">P<sub>1</sub> : T=(37-37)/3=0, P=(70-68)/7=0.286 → (0, 0.286). P<sub>2</sub> : T=(39-37)/3=0.667, P=(68-68)/7=0 → (0.667, 0). P<sub>3</sub> : T=(38-37)/3=0.333, P=(75-68)/7=1 → (0.333, 1). P<sub>4</sub> : T=(40-37)/3=1, P=(72-68)/7=0.571 → (1, 0.571). N : T=(38.5-37)/3=<strong>0.5</strong>, P=(71-68)/7=<strong>0.429</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Distances :</strong> d(N,P<sub>1</sub>)=&radic;(0.25+0.02)=<strong>0.520</strong>, d(N,P<sub>2</sub>)=&radic;(0.028+0.184)=<strong>0.460</strong>, d(N,P<sub>3</sub>)=&radic;(0.028+0.327)=<strong>0.595</strong>, d(N,P<sub>4</sub>)=&radic;(0.25+0.02)=<strong>0.505</strong>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text">K=3 → P<sub>2</sub>(Oui), P<sub>4</sub>(Oui), P<sub>1</sub>(Non). Vote : <strong>Oui=2, Non=1</strong>. → <span class="result-highlight">Malade = Oui</span>.</div></div>
+</div>""")
+
+# KNN Exo 4
+add(exo_header("11","knn","Distance de Manhattan vs Euclidienne","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Points : A = (1, 1, 2), B = (4, 5, 2).</p>
+<p><strong>1.</strong> Calculer la distance euclidienne d<sub>E</sub>(A, B).</p>
+<p><strong>2.</strong> Calculer la distance de Manhattan d<sub>M</sub>(A, B).</p>
+<p><strong>3.</strong> Laquelle est la plus grande ? Est-ce toujours le cas ?</p>
+<p><strong>4.</strong> Quelle distance est plus robuste aux valeurs aberrantes (outliers) ?</p>
+</div>""")
+
+# KNN Correction 4
+add(corr_header("11","knn","Distances euclidienne et Manhattan") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Euclidienne :</strong> d<sub>E</sub> = &radic;((4-1)<sup>2</sup>+(5-1)<sup>2</sup>+(2-2)<sup>2</sup>) = &radic;(9+16+0) = &radic;25 = <span class="result-highlight">5</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Manhattan :</strong> d<sub>M</sub> = |4-1|+|5-1|+|2-2| = 3+4+0 = <span class="result-highlight">7</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Manhattan (7) > Euclidienne (5). Oui, <strong>toujours</strong> : d<sub>M</sub> &ge; d<sub>E</sub>. C'est l'inegalite de Cauchy-Schwarz : la somme des valeurs absolues est toujours superieure ou egale a la racine de la somme des carres.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Manhattan</strong> est plus robuste aux outliers car elle ne met pas les ecarts au carre. Un grand ecart sur une dimension en euclidienne est amplifie par le carre, dominant les autres dimensions.</div></div>
+</div>""")
+
+# KNN Exo 5
+add(exo_header("12","knn","KNN : proprietes theoriques (QCM)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce — Repondre par Vrai/Faux</div>
+<p><strong>1.</strong> KNN est un algorithme parametrique.</p>
+<p><strong>2.</strong> KNN necessite une phase d'entrainement longue.</p>
+<p><strong>3.</strong> KNN est sensible au choix de la metrique de distance.</p>
+<p><strong>4.</strong> Avec K = N (tous les points), le classifieur predit toujours la classe majoritaire.</p>
+<p><strong>5.</strong> En haute dimension, les distances entre points deviennent moins informatives (malediction de la dimension).</p>
+</div>""")
+
+# KNN Correction 5
+add(corr_header("12","knn","Proprietes theoriques de KNN") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>FAUX.</strong> KNN est <strong>non parametrique</strong>. Il ne fait pas d'hypothese sur la forme de la fonction de decision et ne possede pas de parametres appris (il memorise les donnees).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>FAUX.</strong> KNN est un apprenant <strong>paresseux</strong> (lazy learner) : il ne fait quasiment rien a l'entrainement (juste stocker les donnees). Tout le calcul se fait a l'inference.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>VRAI.</strong> Le choix de la distance (euclidienne, Manhattan, Minkowski, Cosinus) affecte directement les voisins trouves et donc la classification.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>VRAI.</strong> Avec K=N, tous les points d'apprentissage participent au vote. Le resultat est la <strong>classe majoritaire</strong> du dataset, independamment du point a classer.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>VRAI.</strong> En haute dimension, les distances entre points tendent a devenir <strong>toutes similaires</strong> (phenomene de concentration). La notion de "plus proche voisin" perd son sens. C'est la <strong>malediction de la dimension</strong>.</div></div>
+</div>""")
+
+# KNN Exo 6
+add(exo_header("13","knn","KNN avec donnees categorielles","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Dataset de films :</p>
+<table><tr><th>Film</th><th>Duree (min)</th><th>Genre</th><th>Action</th><th>Romance</th><th>J'aime</th></tr>
+<tr><td>F<sub>1</sub></td><td>120</td><td>Action</td><td>1</td><td>0</td><td>Oui</td></tr>
+<tr><td>F<sub>2</sub></td><td>95</td><td>Romance</td><td>0</td><td>1</td><td>Oui</td></tr>
+<tr><td>F<sub>3</sub></td><td>110</td><td>Action</td><td>1</td><td>0</td><td>Non</td></tr>
+<tr><td>F<sub>4</sub></td><td>100</td><td>Romance</td><td>0</td><td>0</td><td>Non</td></tr></table>
+<p class="mt-1">Nouveau film N : duree = <strong>105 min</strong>, Action=1, Romance=0. K=3.</p>
+<p><strong>1.</strong> Pourquoi utiliser des variables binaires (one-hot encoding) pour le genre ?</p>
+<p><strong>2.</strong> Normaliser la duree dans [0, 1] puis classer N.</p>
+</div>""")
+
+# KNN Correction 6
+add(corr_header("13","knn","KNN et variables categorielles") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">La distance euclidienne ne fonctionne pas sur des categories (Romance, Action). Le <strong>one-hot encoding</strong> transforme le genre en variables binaires (0/1) compatibles avec les calculs de distance. On perd l'information de genre mais on gagne la compatibilite numerique.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Normalisation duree :</strong> min=95, max=120. N = (105-95)/25 = 0.4. F<sub>1</sub>=1, F<sub>2</sub>=0, F<sub>3</sub>=0.6, F<sub>4</sub>=0.2 (duree seulement).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Vecteurs normalises :</strong> F<sub>1</sub>(1, 1, 0), F<sub>2</sub>(0, 0, 1), F<sub>3</sub>(0.6, 1, 0), F<sub>4</sub>(0.2, 0, 0), N(0.4, 1, 0).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Distances euclidiennes a N :</strong> d(F<sub>1</sub>)=&radic;(0.36+0+0)=0.6, d(F<sub>2</sub>)=&radic;(0.16+1+1)=1.47, d(F<sub>3</sub>)=&radic;(0.04+0+0)=0.2, d(F<sub>4</sub>)=&radic;(0.04+1+0)=1.02.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text">K=3 → plus proches : F<sub>3</sub>(Non), F<sub>1</sub>(Oui), F<sub>4</sub>(Non). Vote : <strong>Non=2, Oui=1</strong>. → <span class="result-highlight">J'aime = Non</span>.</div></div>
+</div>""")
+
+# ===================== BAYES EXERCISES =====================
+
+add(exo_header("14","bayes","Probabilites conditionnelles et theoreme de Bayes","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Une maladie M touche 2% de la population. Un test de depistage detecte la maladie avec une sensibilite de 95% (P(Test+|M) = 0.95). La specificite est de 90% (P(Test-|non M) = 0.90).</p>
+<p><strong>1.</strong> Calculer P(Test+|M) et P(Test+|non M).</p>
+<p><strong>2.</strong> Une personne est testee positive. Quelle est la probabilite qu'elle soit vraiment malade P(M|Test+) ?</p>
+<p><strong>3.</strong> Commenter le resultat.</p>
+</div>""")
+
+add(corr_header("14","bayes","Theoreme de Bayes — depistage") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Donnees :</strong> P(M)=0.02, P(Test+|M)=0.95, P(Test-|non M)=0.90. Donc P(Test+|non M)=1-0.90=<strong>0.10</strong> (taux de faux positifs = 10%).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Formule de Bayes :</strong> P(M|Test+) = P(Test+|M)&times;P(M) / P(Test+).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>P(Test+) =</strong> P(Test+|M)P(M) + P(Test+|non M)P(non M) = 0.95&times;0.02 + 0.10&times;0.98 = 0.019 + 0.098 = <strong>0.117</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>P(M|Test+) =</strong> 0.95&times;0.02 / 0.117 = 0.019/0.117 = <span class="result-highlight">0.162 (16.2%)</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Commentaire :</strong> Malgre un test positif avec 95% de sensibilite, la probabilite d'etre reellement malade n'est que de 16.2% ! C'est le <strong>paradoxe des tests de depistage</strong> : quand la maladie est rare (2%), les faux positifs dominent. Sur 1000 personnes testees, 117 seront positives mais seulement 19 seront vraiment malades.</div></div>
+</div>""")
+
+add(exo_header("15","bayes","Calcul de cotes (odds) — Type QCM 2021","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Dans une population, 20% des personnes sont atteintes d'une pathologie P.</p>
+<p><strong>1.</strong> Calculer la probabilite de ne pas etre malade P(non P).</p>
+<p><strong>2.</strong> Calculer la cote (odds) pour etre malade : cote(P) = P(P)/P(non P).</p>
+<p><strong>3.</strong> Calculer la cote pour ne PAS etre malade : cote(non P).</p>
+<p><strong>4.</strong> Exprimer le resultat sous la forme "X contre 1".</p>
+</div>""")
+
+add(corr_header("15","bayes","Calcul de cotes (odds)") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">P(non P) = 1 - 0.20 = <span class="result-highlight">0.80 (80%)</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">cote(P) = P(P)/P(non P) = 0.20/0.80 = <span class="result-highlight">0.25</span>. Interpretation : 1 chance d'etre malade pour 4 chances de ne pas l'etre.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">cote(non P) = P(non P)/P(P) = 0.80/0.20 = <span class="result-highlight">4</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">La cote de ne pas etre malade est de <span class="result-highlight">4 contre 1</span>. Pour 1 personne malade, il y a 4 personnes non malades.</div></div>
+</div>""")
+
+add(exo_header("16","bayes","Classification Bayes naif — Jouer au tennis","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On veut predire si on joue au tennis (Oui/Non) selon la meteo :</p>
+<table><tr><th>Ciel</th><th>Temperature</th><th>Vent</th><th>Jouer</th></tr>
+<tr><td>Soleil</td><td>Chaude</td><td>Faible</td><td>Non</td></tr>
+<tr><td>Soleil</td><td>Chaude</td><td>Fort</td><td>Non</td></tr>
+<tr><td>Couvert</td><td>Chaude</td><td>Faible</td><td>Oui</td></tr>
+<tr><td>Pluie</td><td>Douce</td><td>Faible</td><td>Oui</td></tr>
+<tr><td>Pluie</td><td>Froide</td><td>Faible</td><td>Oui</td></tr>
+<tr><td>Pluie</td><td>Froide</td><td>Fort</td><td>Non</td></tr>
+<tr><td>Couvert</td><td>Froide</td><td>Fort</td><td>Oui</td></tr>
+<tr><td>Soleil</td><td>Douce</td><td>Faible</td><td>Non</td></tr></table>
+<p class="mt-1">Nouveau jour : <strong>Ciel=Soleil, Temperature=Froide, Vent=Faible</strong>.</p>
+<p><strong>1.</strong> Calculer les probabilites a priori P(Oui) et P(Non).</p>
+<p><strong>2.</strong> Calculer P(Ciel=Soleil|Jouer=Oui), P(Temp=Froide|Jouer=Oui), P(Vent=Faible|Jouer=Oui).</p>
+<p><strong>3.</strong> Avec l'hypothese naive, classer le nouveau jour.</p>
+<p><strong>4.</strong> Quel est le role de l'hypothese d'independance conditionnelle ?</p>
+</div>""")
+
+add(corr_header("16","bayes","Bayes naif — Jouer au tennis") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Priors :</strong> 8 exemples. Jouer=Oui : 5/8. Jouer=Non : 3/8.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>P(Soleil|Non) :</strong> parmi les 3 Non, 3 ont Soleil → 3/3 = 1. <strong>P(Soleil|Oui) :</strong> parmi les 5 Oui, 0 Soleil → 0/5. Problème : probabilite nulle si non vue ! On utilise le <strong>lissage de Laplace</strong> : (0+1)/(5+3) = 1/8.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Avec lissage de Laplace :</strong> P(Soleil|Oui)=(0+1)/(5+3)=1/8. P(Froide|Oui)=(2+1)/(5+3)=3/8. P(Faible|Oui)=(4+1)/(5+2)=5/7. P(Soleil|Non)=(3+1)/(3+3)=4/6. P(Froide|Non)=(1+1)/(3+3)=2/6. P(Faible|Non)=(2+1)/(3+2)=3/5.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Score Oui :</strong> P(Oui) &times; P(Soleil|Oui) &times; P(Froide|Oui) &times; P(Faible|Oui) = 5/8 &times; 1/8 &times; 3/8 &times; 5/7 = 75/3584 &asymp; 0.0021.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Score Non :</strong> P(Non) &times; P(Soleil|Non) &times; P(Froide|Non) &times; P(Faible|Non) = 3/8 &times; 4/6 &times; 2/6 &times; 3/5 = 72/1440 = 0.0050.</div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text">Score(Non) > Score(Oui) → <span class="result-highlight">Jouer = Non</span>.</div></div>
+<div class="step-row"><div class="step-num">7</div><div class="step-text"><strong>Hypothese naive :</strong> On suppose que les attributs sont <strong>independants conditionnellement a la classe</strong>. P(X|Y) = &Pi; P(X<sub>i</sub>|Y). Cette hypothese est souvent fausse mais le classifieur reste performant en pratique.</div></div>
+</div>""")
+
+add(exo_header("17","bayes","Cotes et rapport de vraisemblance","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un test medical a : sensibilite = 98%, specificite = 95%. Prevalence de la maladie = 1%.</p>
+<p><strong>1.</strong> Calculer le rapport de vraisemblance positif LR+ = sensibilite / (1 - specificite).</p>
+<p><strong>2.</strong> Calculer la cote a priori de la maladie.</p>
+<p><strong>3.</strong> En utilisant la formule : cote a posteriori = cote a priori &times; LR+, calculer la probabilite a posteriori de la maladie si le test est positif.</p>
+</div>""")
+
+add(corr_header("17","bayes","Rapport de vraisemblance et cotes") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>LR+ :</strong> sensibilite / (1-specificite) = 0.98 / 0.05 = <span class="result-highlight">19.6</span>. Cela signifie qu'un test positif est 19.6 fois plus probable chez un malade que chez un non-malade.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Cote a priori :</strong> P(M)/P(non M) = 0.01/0.99 = <span class="result-highlight">0.0101</span> (&asymp; 1 contre 99).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Cote a posteriori :</strong> 0.0101 &times; 19.6 = <span class="result-highlight">0.198</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Probabilite a posteriori :</strong> P = cote/(1+cote) = 0.198/1.198 = <span class="result-highlight">0.165 (16.5%)</span>. Meme avec un excellent test (LR+=19.6), la probabilite post-test reste faible (16.5%) quand la maladie est tres rare (1%).</div></div>
+</div>""")
+
+add(exo_header("18","bayes","Independance conditionnelle (QCM)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Dans le classifieur Bayes naif, que suppose-t-on sur les attributs ?</p>
+<p><strong>2.</strong> Cette hypothese est-elle realiste en pratique ? Pourquoi le classifieur fonctionne-t-il quand meme ?</p>
+<p><strong>3.</strong> Donner un exemple concret ou l'hypothese naive est clairement violee.</p>
+<p><strong>4.</strong> Bayes naif est-il parametrique ou non parametrique ?</p>
+</div>""")
+
+add(corr_header("18","bayes","Independance conditionnelle — QCM") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">On suppose que les attributs sont <strong>independants conditionnellement a la classe</strong> : P(X<sub>1</sub>,...,X<sub>n</sub>|Y) = P(X<sub>1</sub>|Y) &times; ... &times; P(X<sub>n</sub>|Y).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">L'hypothese est <strong>rarement vraie</strong> (ex: taille et poids sont correles). Pourtant le classifieur fonctionne bien car : (a) la decision depend du <strong>classement</strong> des scores, pas de leur valeur exacte ; (b) les probabilites estimees sont <strong>biaisees mais monotones</strong> (l'ordre est preserve) ; (c) avec peu de donnees, la simplicite du modele evite le sur-apprentissage.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Classification de fruits : attributs = couleur et forme. "Rouge" et "Rond" ne sont pas independants (les tomates sont rouges ET rondes). L'hypothese est violee, mais le classifieur peut quand meme bien separer tomates des bananes.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Bayes naif est <strong>parametrique</strong> : on estime les parametres des distributions de probabilite (P(X<sub>i</sub>|Y)). Le nombre de parametres est fixe independamment du nombre d'exemples.</div></div>
+</div>""")
+
+# ===================== PARTIE 4: EVALUATION (6 exercices) =====================
+
+add(exo_header("19","eval","Matrice de confusion — depistage COVID","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce — Type annales 2023</div>
+<p>Un test de depistage est applique a 1000 personnes. On sait que 100 personnes sont reellement malades, 900 sont saines. La sensibilite du test est de 95%, sa specificite est de 90%.</p>
+<p><strong>1.</strong> Completer la matrice de confusion (TP, FP, TN, FN).</p>
+<p><strong>2.</strong> Calculer l'accuracy, la precision, le rappel (sensibilite) et le F1-score.</p>
+<p><strong>3.</strong> Combien de personnes saines recoivent un resultat positif (faux positifs) ?</p>
+<p><strong>4.</strong> Que pensez-vous de la valeur predictive positive (precision) du test ?</p>
+</div>""")
+
+add(corr_header("19","eval","Matrice de confusion — COVID") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>TP :</strong> 95% des 100 malades = <strong>95</strong> vrais positifs. <strong>FN :</strong> 100 - 95 = <strong>5</strong> faux negatifs.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>TN :</strong> 90% des 900 sains = <strong>810</strong> vrais negatifs. <strong>FP :</strong> 900 - 810 = <strong>90</strong> faux positifs.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Matrice : T+|T- en colonnes, Malade|Sain en lignes. TP=95, FN=5, FP=90, TN=810.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Accuracy :</strong> (95+810)/1000 = <span class="result-highlight">90.5%</span>. <strong>Precision :</strong> 95/(95+90) = <span class="result-highlight">51.4%</span>. <strong>Recall (sensibilite) :</strong> 95/100 = <span class="result-highlight">95%</span>. <strong>F1 :</strong> 2 &times; (0.514 &times; 0.95)/(0.514+0.95) = <span class="result-highlight">0.667</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>90 faux positifs :</strong> 90 personnes saines sur 900 recoivent un resultat positif (10%). C'est le taux de faux positifs FPR = 1 - specificite = 10%.</div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text">La precision (51.4%) est mediocre : un test positif n'est correct qu'une fois sur deux. C'est du au <strong>faible taux de base</strong> de la maladie (10%). Sur 185 tests positifs, seuls 95 sont de vrais malades.</div></div>
+</div>""")
+
+add(exo_header("20","eval","Sensibilite vs Specificite — compromis","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Definir la sensibilite (rappel) et la specificite.</p>
+<p><strong>2.</strong> Un test avec 100% de sensibilite peut-il avoir une faible specificite ? Donner un exemple.</p>
+<p><strong>3.</strong> Dans quel contexte medical prefere-t-on maximiser la sensibilite ? La specificite ?</p>
+<p><strong>4.</strong> Comment le seuil de decision d'un classifieur affecte-t-il la sensibilite et la specificite ?</p>
+</div>""")
+
+add(corr_header("20","eval","Sensibilite vs Specificite") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Sensibilite (rappel) :</strong> TP/(TP+FN) — capacite a detecter les positifs. <strong>Specificite :</strong> TN/(TN+FP) — capacite a reconnaitre les negatifs.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Oui. Un test qui declare <strong>tout le monde positif</strong> a 100% de sensibilite (tous les malades sont detectes) mais 0% de specificite (aucun sain n'est reconnu). Inutile en pratique.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Maximiser la sensibilite :</strong> depistage de maladies graves et curables (cancer) ou il ne faut <strong>rater aucun malade</strong> (eviter les faux negatifs). <strong>Maximiser la specificite :</strong> confirmation diagnostique avant traitement lourd, pour <strong>eviter les faux positifs</strong> (traiter un sain est couteux/dangereux).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Baisser le seuil → plus de positifs predits → <strong>sensibilite augmente, specificite diminue</strong>. Monter le seuil → moins de positifs predits → <strong>sensibilite diminue, specificite augmente</strong>. C'est le compromis classique resume par la courbe ROC.</div></div>
+</div>""")
+
+add(exo_header("21","eval","Courbe ROC et AUC","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Qu'est-ce qu'une courbe ROC ? Que represente-t-elle ?</p>
+<p><strong>2.</strong> Que signifie une AUC de 1 ? De 0.5 ? De 0 ?</p>
+<p><strong>3.</strong> Un classifieur A a une AUC de 0.92, un classifieur B a une AUC de 0.85. Lequel est meilleur ?</p>
+<p><strong>4.</strong> Si les classes sont tres desequilibrees (ex: 1% de positifs), l'accuracy est-elle une bonne metrique ? Pourquoi ?</p>
+</div>""")
+
+add(corr_header("21","eval","Courbe ROC et AUC") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">La courbe ROC trace le <strong>taux de vrais positifs (sensibilite)</strong> en fonction du <strong>taux de faux positifs (1-specificite)</strong> pour differents seuils de decision. Elle montre le compromis entre detection et fausses alarmes.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>AUC=1 :</strong> classifieur parfait (separation totale). <strong>AUC=0.5 :</strong> classifieur aleatoire (la diagonale). <strong>AUC=0 :</strong> classifieur inversement parfait (toujours faux, il suffit d'inverser ses predictions pour obtenir AUC=1).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">A (AUC=0.92) est meilleur que B (AUC=0.85) au sens du <strong>pouvoir discriminatif global</strong>. Un point aleatoire positif a 92% de chances d'avoir un score plus eleve qu'un point aleatoire negatif (contre 85% pour B).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Non, l'accuracy est trompeuse en cas de desequilibre. Avec 1% de positifs, un classifieur qui predit <strong>toujours negatif</strong> a 99% d'accuracy ! Il faut utiliser <strong>precision, rappel, F1-score, AUC</strong> qui sont insensibles au desequilibre des classes.</div></div>
+</div>""")
+
+add(exo_header("22","eval","F1-score et moyenne harmonique","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Deux classifieurs pour la detection de spam :</p>
+<table><tr><th>Classifieur</th><th>Precision</th><th>Rappel</th></tr>
+<tr><td>A</td><td>0.90</td><td>0.40</td></tr>
+<tr><td>B</td><td>0.65</td><td>0.65</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Calculer le F1-score de chaque classifieur.</p>
+<p><strong>2.</strong> Lequel est le meilleur selon le F1-score ?</p>
+<p><strong>3.</strong> Pourquoi utilise-t-on la moyenne harmonique plutot que la moyenne arithmetique ?</p>
+<p><strong>4.</strong> Le classifieur A detecte 40% des spams mais ses detections sont fiables a 90%. Dans quel cas prefererait-on A a B ?</p>
+</div>""")
+
+add(corr_header("22","eval","F1-score et moyenne harmonique") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">F1 = 2 &times; (P &times; R)/(P + R). Pour A : 2 &times; (0.90 &times; 0.40)/(0.90+0.40) = 2 &times; 0.36/1.30 = <span class="result-highlight">0.554</span>. Pour B : 2 &times; (0.65 &times; 0.65)/(0.65+0.65) = 2 &times; 0.4225/1.30 = <span class="result-highlight">0.650</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">B (F1=0.650) > A (F1=0.554). <span class="result-highlight">B est meilleur</span> selon le F1-score car il a un meilleur equilibre precision/rappel.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">La <strong>moyenne harmonique</strong> penalise les desequilibres extremes. Exemple : P=0.99, R=0.01 → moyenne arithmetique=0.50, F1&asymp;0.02. La moyenne arithmetique donnerait un score moyen a un classifieur quasi-inutile. La moyenne harmonique reflete mieux le <strong>pire des deux</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">On prefererait A quand les <strong>faux positifs sont tres couteux</strong> : par exemple, un filtre anti-spam automatique qui supprime les emails. On prefere rater du spam que supprimer un email legitime (haute precision = peu de faux positifs).</div></div>
+</div>""")
+
+add(exo_header("23","eval","Precision, rappel, FPR — calcul complet","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Matrice de confusion d'un classifieur binaire :</p>
+<table><tr><th></th><th>Predit Positif</th><th>Predit Negatif</th></tr>
+<tr><td>Reel Positif</td><td>30</td><td>20</td></tr>
+<tr><td>Reel Negatif</td><td>10</td><td>140</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Identifier TP, TN, FP, FN.</p>
+<p><strong>2.</strong> Calculer accuracy, precision, rappel, specificite, FPR, F1-score.</p>
+<p><strong>3.</strong> Ce classifieur est-il bon ? Argumenter.</p>
+</div>""")
+
+add(corr_header("23","eval","Calcul complet des metriques") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">TP=30, FN=20, FP=10, TN=140. Total=200. Positifs reels=50, Negatifs reels=150.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Accuracy :</strong> (30+140)/200 = <span class="result-highlight">85%</span>. <strong>Precision :</strong> 30/(30+10) = <span class="result-highlight">75%</span>. <strong>Rappel (sensibilite) :</strong> 30/(30+20) = <span class="result-highlight">60%</span>. <strong>Specificite :</strong> 140/(140+10) = <span class="result-highlight">93.3%</span>. <strong>FPR :</strong> 10/(10+140) = <span class="result-highlight">6.7%</span>. <strong>F1-score :</strong> 2 &times; (0.75 &times; 0.60)/(0.75+0.60) = 2 &times; 0.45/1.35 = <span class="result-highlight">0.667</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Le classifieur est <strong>correct mais pas excellent</strong>. Points forts : bonne accuracy (85%), excellente specificite (93.3%), peu de faux positifs (6.7%). Point faible : rappel moyen (60%) — il rate 40% des cas positifs (20 faux negatifs sur 50). A utiliser quand les faux positifs sont plus couteux que les faux negatifs.</div></div>
+</div>""")
+
+add(exo_header("24","eval","FAR/h — Fausses alarmes par heure","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un dispositif medical wearable analyse des fenetres de 2.56 secondes avec 50% de chevauchement. Sur un patient donne, 5000 fenetres sont analysees. Le classifieur produit 15 fausses alarmes (faux positifs) et detecte 3 crises sur 5.</p>
+<p><strong>1.</strong> Calculer la duree totale d'enregistrement en heures.</p>
+<p><strong>2.</strong> Calculer le FAR/h (False Alarm Rate per hour).</p>
+<p><strong>3.</strong> Est-ce acceptable pour un dispositif medical portable ?</p>
+</div>""")
+
+add(corr_header("24","eval","FAR/h — Fausses alarmes par heure") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Hop = 2.56/2 = 1.28 s. Duree totale = 5000 &times; 1.28 = 6400 secondes = <span class="result-highlight">1.78 heures</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>FAR/h :</strong> FP / duree_heures = 15 / 1.78 = <span class="result-highlight">8.43 fausses alarmes par heure</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">8.43 FAR/h est <strong>inacceptable</strong> pour un wearable medical. Une fausse alarme toutes les 7 minutes en moyenne genererait de l'anxiete et rendrait le dispositif inutilisable. La cible clinique est typiquement <strong>< 1 FAR/h</strong>, idealement < 0.5 FAR/h. Avec 15 FP sur 5000 fenetres (FPR=0.3%), il faut encore reduire les fausses alarmes.</div></div>
+</div>""")
+
+# ===================== PARTIE 5: REGRESSION LOGISTIQUE (4 exercices) =====================
+
+add(exo_header("25","logreg","Fonction sigmoide et interpretation","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un modele de regression logistique estime la probabilite de defaut de credit :</p>
+<p class="text-center"><strong>logit(P) = -3 + 0.5 &times; Age - 1.2 &times; Revenu</strong></p>
+<p>(Age en dizaines d'annees, Revenu en milliers d'euros)</p>
+<p><strong>1.</strong> Donner la formule de la probabilite P(defaut) en fonction du score z = -3 + 0.5 Age - 1.2 Revenu.</p>
+<p><strong>2.</strong> Calculer P(defaut) pour Age=30 (3), Revenu=2000 (2).</p>
+<p><strong>3.</strong> Quel est l'effet d'une augmentation du revenu sur le risque de defaut ?</p>
+</div>""")
+
+add(corr_header("25","logreg","Sigmoide et interpretation") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">P(defaut) = 1/(1 + e<sup>-z</sup>) ou z = -3 + 0.5&times;Age - 1.2&times;Revenu. C'est la <strong>fonction sigmoide</strong> qui transforme le score lineaire en probabilite entre 0 et 1.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">z = -3 + 0.5&times;3 - 1.2&times;2 = -3 + 1.5 - 2.4 = <strong>-3.9</strong>. P = 1/(1+e<sup>3.9</sup>) = 1/(1+49.4) = <span class="result-highlight">0.0198 (1.98%)</span>. Risque de defaut tres faible.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Le coefficient du Revenu est <strong>-1.2</strong> (< 0). Une augmentation du revenu <strong>diminue</strong> le risque de defaut. Plus precisement, une augmentation de 1000&euro; de revenu multiplie l'odds par e<sup>-1.2</sup> &asymp; 0.30 (diminution de 70%).</div></div>
+</div>""")
+
+add(exo_header("26","logreg","Frontiere de decision","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Regression logistique avec : <strong>z = 2x<sub>1</sub> + 3x<sub>2</sub> - 6</strong></p>
+<p><strong>1.</strong> Quelle est l'equation de la frontiere de decision (seuil = 0.5) ?</p>
+<p><strong>2.</strong> Classer les points A(1, 1), B(2, 2), C(0, 3).</p>
+<p><strong>3.</strong> Quel est le signe du coefficient de x<sub>1</sub> ? Qu'indique-t-il ?</p>
+</div>""")
+
+add(corr_header("26","logreg","Frontiere de decision") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">P=0.5 correspond a z=0 (car sigmoide(0)=0.5). Frontiere : <span class="result-highlight">2x<sub>1</sub> + 3x<sub>2</sub> - 6 = 0</span> soit <span class="result-highlight">2x<sub>1</sub> + 3x<sub>2</sub> = 6</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>A(1,1) :</strong> z = 2+3-6 = -1 < 0 → P < 0.5 → <span class="result-highlight">Classe 0</span>. <strong>B(2,2) :</strong> z = 4+6-6 = 4 > 0 → <span class="result-highlight">Classe 1</span>. <strong>C(0,3) :</strong> z = 0+9-6 = 3 > 0 → <span class="result-highlight">Classe 1</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Coefficient de x<sub>1</sub> = <strong>+2</strong> (positif). Plus x<sub>1</sub> augmente, plus z augmente, plus la probabilite de la classe 1 est elevee. Le coefficient positif indique une <strong>relation positive</strong> entre x<sub>1</sub> et la probabilite d'appartenir a la classe 1.</div></div>
+</div>""")
+
+add(exo_header("27","logreg","Odds ratio et interpretation des coefficients","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un modele de regression logistique predit l'achat (Oui/Non) en fonction du prix : <strong>z = 4 - 0.8 &times; Prix</strong> (Prix en centaines d'euros).</p>
+<p><strong>1.</strong> Calculer l'odds d'achat pour un prix de 300&euro;.</p>
+<p><strong>2.</strong> Calculer l'odds d'achat pour un prix de 400&euro;.</p>
+<p><strong>3.</strong> Calculer l'odds ratio entre ces deux prix. Que signifie-t-il ?</p>
+<p><strong>4.</strong> Si le prix augmente de 100&euro;, par combien l'odds d'achat est-il multiplie ?</p>
+</div>""")
+
+add(corr_header("27","logreg","Odds ratio") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">A 300&euro; (Prix=3) : z = 4 - 0.8&times;3 = 1.6. Odds = e<sup>z</sup> = e<sup>1.6</sup> = <span class="result-highlight">4.95</span>. Probabilite = 4.95/(1+4.95) = 83.2%.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">A 400&euro; (Prix=4) : z = 4 - 0.8&times;4 = 0.8. Odds = e<sup>0.8</sup> = <span class="result-highlight">2.23</span>. Probabilite = 2.23/(1+2.23) = 69.1%.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Odds ratio :</strong> 4.95/2.23 = <span class="result-highlight">2.22</span>. L'odds d'achat a 300&euro; est 2.22 fois plus eleve qu'a 400&euro;.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">L'odds ratio pour une augmentation de 1 unite de Prix (100&euro;) est <span class="result-highlight">e<sup>-0.8</sup> = 0.449</span>. L'odds d'achat est <strong>multiplie par 0.449</strong> (reduction de 55%) pour chaque augmentation de 100&euro;.</div></div>
+</div>""")
+
+add(exo_header("28","logreg","Regression logistique vs lineaire","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce — QCM</div>
+<p><strong>1.</strong> Pourquoi ne pas utiliser la regression lineaire pour une tache de classification binaire ?</p>
+<p><strong>2.</strong> Que modifie la fonction sigmoide par rapport a la regression lineaire ?</p>
+<p><strong>3.</strong> La regression logistique est-elle un modele lineaire ou non lineaire ?</p>
+<p><strong>4.</strong> Quelle fonction de cout est utilisee pour entrainer la regression logistique ? Pourquoi pas l'erreur quadratique moyenne (MSE) ?</p>
+</div>""")
+
+add(corr_header("28","logreg","Regression logistique vs lineaire") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">La regression lineaire predit des valeurs <strong>continues non bornees</strong> (de -&infin; a +&infin;), pas des probabilites entre 0 et 1. De plus, elle est sensible aux outliers et ne penalise pas correctement les erreurs de classification.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">La sigmoide <strong>comprime</strong> la sortie lineaire z dans [0,1], la transformant en probabilite. &sigma;(z) = 1/(1+e<sup>-z</sup>). La frontiere de decision reste lineaire (z=0), mais la sortie est une probabilite.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">La regression logistique est un modele <strong>lineaire</strong> (la frontiere de decision z=0 est un hyperplan). La non-linearite de la sigmoide est juste une transformation de la sortie, pas du modele sous-jacent.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">On utilise la <strong>log-vraisemblance negative (cross-entropy)</strong>. Le MSE est non convexe avec la sigmoide (plusieurs minima locaux), alors que la cross-entropy donne une fonction <strong>convexe</strong> (un seul minimum global), garantissant la convergence vers l'optimum.</div></div>
+</div>""")
+
+# ===================== PARTIE 6: ARBRE DE DECISION (4 exercices) =====================
+
+add(exo_header("29","tree","Calcul d'entropie","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Soit un ensemble de 10 exemples pour predire "Pret approuve" (Oui/Non) :</p>
+<p>7 Oui, 3 Non.</p>
+<p><strong>1.</strong> Calculer l'entropie de cet ensemble.</p>
+<p><strong>2.</strong> Meme question avec 5 Oui et 5 Non.</p>
+<p><strong>3.</strong> Meme question avec 10 Oui et 0 Non.</p>
+<p><strong>4.</strong> Quand l'entropie est-elle maximale ? Minimale ?</p>
+</div>""")
+
+add(corr_header("29","tree","Calcul d'entropie") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Entropie H = -&Sigma; p<sub>i</sub> log<sub>2</sub>(p<sub>i</sub>). 7/10=0.7 Oui, 3/10=0.3 Non. H = -0.7&times;log<sub>2</sub>(0.7) - 0.3&times;log<sub>2</sub>(0.3) = -0.7&times;(-0.515) - 0.3&times;(-1.737) = 0.360 + 0.521 = <span class="result-highlight">0.881 bits</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">5 Oui, 5 Non : H = -0.5&times;log<sub>2</sub>(0.5) - 0.5&times;log<sub>2</sub>(0.5) = -0.5&times;(-1) - 0.5&times;(-1) = <span class="result-highlight">1.0 bit</span>. <strong>Entropie maximale</strong> pour 2 classes.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">10 Oui, 0 Non : H = -1&times;log<sub>2</sub>(1) - 0&times;log<sub>2</sub>(0) = -1&times;0 - 0 = <span class="result-highlight">0 bit</span>. <strong>Entropie minimale</strong> (ensemble pur).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">L'entropie est <strong>maximale</strong> quand les classes sont uniformement distribuees (maximum d'incertitude). Elle est <strong>minimale (=0)</strong> quand l'ensemble est pur (une seule classe, aucune incertitude).</div></div>
+</div>""")
+
+add(exo_header("30","tree","Gain d'information et choix de split","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Dataset : 14 exemples, 9 Oui, 5 Non (Jouer au tennis).</p>
+<p>On considere un split sur l'attribut <strong>Ciel</strong> :</p>
+<table><tr><th>Ciel</th><th>Oui</th><th>Non</th><th>Total</th></tr>
+<tr><td>Soleil</td><td>2</td><td>3</td><td>5</td></tr>
+<tr><td>Couvert</td><td>4</td><td>0</td><td>4</td></tr>
+<tr><td>Pluie</td><td>3</td><td>2</td><td>5</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Calculer l'entropie du parent H(Parent).</p>
+<p><strong>2.</strong> Calculer l'entropie de chaque enfant.</p>
+<p><strong>3.</strong> Calculer le gain d'information IG(Ciel).</p>
+<p><strong>4.</strong> Cet attribut est-il un bon split ?</p>
+</div>""")
+
+add(corr_header("30","tree","Gain d'information — Split sur Ciel") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>H(Parent) :</strong> p(Oui)=9/14=0.643, p(Non)=5/14=0.357. H = -0.643&times;log<sub>2</sub>(0.643) - 0.357&times;log<sub>2</sub>(0.357) = -0.643&times;(-0.637) - 0.357&times;(-1.485) = 0.410 + 0.531 = <span class="result-highlight">0.940 bits</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>H(Soleil) :</strong> 2/5 Oui, 3/5 Non. H = -0.4&times;log<sub>2</sub>(0.4) - 0.6&times;log<sub>2</sub>(0.6) = 0.4&times;1.322 + 0.6&times;0.737 = <span class="result-highlight">0.971</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>H(Couvert) :</strong> 4/4 Oui, 0 Non → <span class="result-highlight">0.000</span> (noeud pur).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>H(Pluie) :</strong> 3/5 Oui, 2/5 Non. Meme calcul que Soleil → <span class="result-highlight">0.971</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>H ponderee :</strong> (5/14)&times;0.971 + (4/14)&times;0 + (5/14)&times;0.971 = 0.347 + 0 + 0.347 = <span class="result-highlight">0.694</span>.</div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text"><strong>Gain d'information :</strong> IG = H(Parent) - H(Enfants) = 0.940 - 0.694 = <span class="result-highlight">0.246 bits</span>.</div></div>
+<div class="step-row"><div class="step-num">7</div><div class="step-text">L'attribut Ciel apporte un gain d'information significatif. Le noeud Couvert est <strong>pur</strong> (tous Oui), ce qui est excellent. C'est un <strong>bon split</strong>. On le choisirait si IG(Ciel) > IG(Temperature) et > IG(Vent).</div></div>
+</div>""")
+
+add(exo_header("31","tree","Construction d'un arbre — split optimal","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>On a 8 exemples avec 2 attributs binaires :</p>
+<table><tr><th>X<sub>1</sub></th><th>X<sub>2</sub></th><th>Y</th><th>Count</th></tr>
+<tr><td>0</td><td>0</td><td>0</td><td>3</td></tr>
+<tr><td>0</td><td>1</td><td>1</td><td>2</td></tr>
+<tr><td>1</td><td>0</td><td>1</td><td>2</td></tr>
+<tr><td>1</td><td>1</td><td>0</td><td>1</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Calculer H(Parent).</p>
+<p><strong>2.</strong> Calculer IG pour X<sub>1</sub>.</p>
+<p><strong>3.</strong> Calculer IG pour X<sub>2</sub>.</p>
+<p><strong>4.</strong> Quel attribut choisir pour le split racine ?</p>
+</div>""")
+
+add(corr_header("31","tree","Construction d'arbre — split optimal") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Total=8, Y=1 : 2+2=4, Y=0 : 3+1=4. H(Parent) = -0.5&times;log<sub>2</sub>(0.5) - 0.5&times;log<sub>2</sub>(0.5) = <span class="result-highlight">1.0 bit</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Split X<sub>1</sub>=0 :</strong> 5 exemples (3 Y=0, 2 Y=1). H = -3/5&times;log<sub>2</sub>(3/5) - 2/5&times;log<sub>2</sub>(2/5) = 0.6&times;0.737 + 0.4&times;1.322 = <strong>0.971</strong>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Split X<sub>1</sub>=1 :</strong> 3 exemples (1 Y=0, 2 Y=1). H = -1/3&times;log<sub>2</sub>(1/3) - 2/3&times;log<sub>2</sub>(2/3) = 0.333&times;1.585 + 0.667&times;0.585 = <strong>0.918</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">H ponderee = (5/8)&times;0.971 + (3/8)&times;0.918 = 0.607 + 0.344 = <strong>0.951</strong>. <span class="result-highlight">IG(X<sub>1</sub>) = 1.0 - 0.951 = 0.049 bits</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Split X<sub>2</sub>=0 :</strong> 5 exemples (3 Y=0, 2 Y=1). H = <strong>0.971</strong> (identique a X<sub>1</sub>=0). <strong>Split X<sub>2</sub>=1 :</strong> 3 exemples (1 Y=0, 2 Y=1). H = <strong>0.918</strong>.</div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text">H ponderee identique → <span class="result-highlight">IG(X<sub>2</sub>) = 0.049 bits aussi</span>. Les deux attributs ont le meme gain. On peut choisir <strong>l'un ou l'autre</strong> (X<sub>1</sub> d'abord par convention). L'arbre n'est pas unique.</div></div>
+</div>""")
+
+add(exo_header("32","tree","Sur-apprentissage et elagage","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Qu'est-ce que le sur-apprentissage dans un arbre de decision ?</p>
+<p><strong>2.</strong> Comment detecter qu'un arbre est en sur-apprentissage ?</p>
+<p><strong>3.</strong> Citer 2 methodes pour eviter le sur-apprentissage.</p>
+<p><strong>4.</strong> Un arbre qui classe parfaitement les donnees d'entrainement (100% accuracy) est-il forcement bon ?</p>
+</div>""")
+
+add(corr_header("32","tree","Sur-apprentissage et elagage") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Le sur-apprentissage se produit quand l'arbre devient <strong>trop profond</strong> et apprend le <strong>bruit</strong> des donnees d'entrainement plutot que les vraies relations. L'arbre memorise chaque exemple au lieu de generaliser.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Signes : <strong>accuracy train >> accuracy test</strong>. L'erreur d'entrainement continue de baisser alors que l'erreur de validation remonte. Arbre avec beaucoup de feuilles contenant peu d'exemples (1-2).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Pre-elagage :</strong> arreter la croissance tot (profondeur max, min echantillons par feuille, gain minimum requis). <strong>Post-elagage :</strong> construire l'arbre complet puis supprimer les branches qui n'ameliorent pas la performance sur un ensemble de validation.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Non.</strong> 100% sur l'entrainement est presque toujours du sur-apprentissage. L'arbre a probablement cree une feuille par exemple d'entrainement et ne generalisera pas. La performance sur des donnees de test sera mediocre. Le but n'est pas de memoriser mais de <strong>generaliser</strong>.</div></div>
+</div>""")
+
+# ===================== RECAP SLIDES =====================
+
+add("""<div class="text-center">
+<div class="slide-header"><span class="section-badge">RECAP</span><div class="slide-title">Tableau recapitulatif — Algorithmes de classification</div></div>
+<table><tr><th>Algorithme</th><th>Type</th><th>Frontiere</th><th>Points cles</th></tr>
+<tr><td>SVM</td><td>Discriminatif</td><td>Lineaire / Noyaux</td><td>Maximise la marge, vecteurs supports, dual pour kernel trick</td></tr>
+<tr><td>KNN</td><td>Non parametrique</td><td>Locale (Voronoi)</td><td>Paresseux, sensible a l'echelle, K petit = sur-apprentissage</td></tr>
+<tr><td>Bayes naif</td><td>Generatif</td><td>Quadratique / Lineaire</td><td>Hypothese d'independance, rapide, bon avec peu de donnees</td></tr>
+<tr><td>Reg. Logistique</td><td>Discriminatif</td><td>Lineaire</td><td>Sortie = probabilite, coefficients interpretables (odds ratio)</td></tr>
+<tr><td>Arbre de Decision</td><td>Discriminatif</td><td>Rectangulaire</td><td>Interpretable, entropie/gain, sur-apprentissage si profond</td></tr></table>
+</div>""")
+
+add("""<div class="text-center">
+<div class="slide-header"><span class="section-badge">RECAP</span><div class="slide-title">Formules cles a memoriser</div></div>
+<div class="grid-2">
+<div class="formula-box"><div class="title">SVM</div><p>w = &Sigma; &alpha;<sub>i</sub>y<sub>i</sub>x<sub>i</sub><br>Decision = signe(w&middot;x + b)<br>Marge = 2/||w||</p></div>
+<div class="formula-box"><div class="title">KNN</div><p>d<sub>E</sub> = &radic;(&Sigma;(x<sub>i</sub>-z<sub>i</sub>)<sup>2</sup>)<br>Vote majoritaire parmi K voisins<br>K optimal &asymp; &radic;n</p></div>
+<div class="formula-box"><div class="title">Bayes</div><p>P(A|B) = P(B|A)P(A)/P(B)<br>Cote = P/(1-P)<br>Cote post = Cote prior &times; LR</p></div>
+<div class="formula-box"><div class="title">Evaluation</div><p>Sensibilite = TP/(TP+FN)<br>Specificite = TN/(TN+FP)<br>F1 = 2PR/(P+R)<br>FAR/h = FP/heures</p></div>
+<div class="formula-box"><div class="title">Reg. Logistique</div><p>P = 1/(1+e<sup>-z</sup>)<br>Frontiere : z = 0<br>Odds ratio = e<sup>&beta;</sup></p></div>
+<div class="formula-box"><div class="title">Arbre de Decision</div><p>H = -&Sigma;p<sub>i</sub>log<sub>2</sub>p<sub>i</sub><br>IG = H(Parent) - H(Enfants)<br>Split optimal = max IG</p></div>
+</div>
+</div>""")
+
+add("""<div class="text-center">
+<div class="slide-header"><span class="section-badge">RECAP</span><div class="slide-title">Questions-type d'examen — Testez-vous !</div></div>
+<div class="grid-2">
+<div class="card"><h3>SVM</h3><p>1. SVM maximise quoi ?<br>2. Avantage du dual ?<br>3. Hard vs soft margin ?<br>4. C grand = ?<br>5. Noyau le plus utilise ?</p></div>
+<div class="card"><h3>KNN</h3><p>1. Parametrique ou non ?<br>2. K=1 vs K=N ?<br>3. Pourquoi normaliser ?<br>4. Malediction dimension ?</p></div>
+<div class="card"><h3>Bayes</h3><p>1. Hypothese naive ?<br>2. Cote = ?<br>3. Lissage de Laplace ?</p></div>
+<div class="card"><h3>Evaluation</h3><p>1. Sensibilite vs specificite ?<br>2. F1-score = ?<br>3. AUC=0.5 signifie ?<br>4. Accuracy trompeuse si ?</p></div>
+<div class="card"><h3>Reg. Logistique</h3><p>1. Sigmoide = ?<br>2. Odds ratio = ?<br>3. Modele lineaire ?</p></div>
+<div class="card"><h3>Arbre de Decision</h3><p>1. Entropie max quand ?<br>2. IG = ?<br>3. Sur-apprentissage ?<br>4. Elagage ?</p></div>
+</div>
+<div class="success-box mt-2 text-center"><strong>Conseil examen :</strong> Commencez par les questions de cours (rapide, rentable), puis les exercices de calcul (SVM, matrice de confusion), enfin les questions de reflexion.</div>
+</div>""")
+
+add("""<div class="text-center">
+<div class="hero-title">Bonne revision !</div>
+<div class="hero-subtitle">32 exercices corriges — SVM, KNN, Bayes, Evaluation, Regression Logistique, Arbres de Decision<br>Base sur les annales SUPCOM 2021 & 2023</div>
+<div class="mt-2"><span class="section-badge">Revoir les slides avec les fleches ← →</span></div>
+<div class="text-small mt-2">Repo : <code>github.com/akiroussama/supcom-ia-doctorat</code></div>
+</div>""")
+
+# ===================== THEORY REFRESHERS =====================
+
+add("""<div class="slide-header"><span class="section-badge svm">THEORIE SVM</span><div class="slide-title">SVM — Les points essentiels a retenir</div></div>
+<div class="grid-2">
+<div class="formula-box"><div class="title">Idee fondamentale</div><p>Chercher l'hyperplan qui <strong>maximise la marge</strong> entre les classes. Les vecteurs supports sont les points les plus proches de la frontiere, ceux qui definissent la marge.</p></div>
+<div class="formula-box"><div class="title">Decision</div><p>f(x) = w&middot;x + b. Si f(x) > 0 → classe +1. Si f(x) < 0 → classe -1. Marge +1 : f(x)=+1. Marge -1 : f(x)=-1.</p></div>
+<div class="formula-box"><div class="title">Dual et noyaux</div><p>w = &Sigma;&alpha;<sub>i</sub>y<sub>i</sub>x<sub>i</sub>. Le dual permet le <strong>kernel trick</strong> : remplacer x<sub>i</sub>&middot;x<sub>j</sub> par K(x<sub>i</sub>,x<sub>j</sub>). Noyaux : lineaire, polynomial, RBF, sigmoide.</p></div>
+<div class="formula-box"><div class="title">Parametre C</div><p>C grand → penalise fort les erreurs → marge etroite → <strong>sur-apprentissage</strong>. C petit → accepte les erreurs → marge large → <strong>sous-apprentissage</strong>.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge knn">THEORIE KNN</span><div class="slide-title">KNN — Les points essentiels a retenir</div></div>
+<div class="grid-2">
+<div class="card"><h3>Principe</h3><p>Pour classer un point : calculer les distances avec tous les points d'apprentissage, prendre les K plus proches, voter. <strong>Pas d'entrainement</strong> (lazy learner).</p></div>
+<div class="card"><h3>Choix de K</h3><p>K petit → sensible au bruit (sur-apprentissage). K grand → trop lisse (sous-apprentissage). Regle : K impair, K &asymp; &radic;n.</p></div>
+<div class="card"><h3>Distances</h3><p>Euclidienne : &radic;(&Sigma;(x<sub>i</sub>-y<sub>i</sub>)<sup>2</sup>). Manhattan : &Sigma;|x<sub>i</sub>-y<sub>i</sub>|. Toujours normaliser les variables !</p></div>
+<div class="card"><h3>Proprietes</h3><p>Non parametrique. Sensible a la malediction de la dimension. Decision locale (diagramme de Voronoi). Bon avec peu de classes, donnees bien separees.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge bayes">THEORIE BAYES</span><div class="slide-title">Bayes naif — Les points essentiels a retenir</div></div>
+<div class="grid-2">
+<div class="card"><h3>Theoreme de Bayes</h3><p>P(A|B) = P(B|A)&times;P(A)/P(B). Permet de <strong>mettre a jour</strong> les probabilites avec l'evidence.</p></div>
+<div class="card"><h3>Hypothese naive</h3><p>Les attributs sont <strong>independants conditionnellement a la classe</strong>. Souvent fausse, mais le classifieur reste performant car l'ordre des scores est preserve.</p></div>
+<div class="card"><h3>Cotes (Odds)</h3><p>Cote = P/(1-P). Cote a posteriori = Cote a priori &times; Rapport de vraisemblance (LR). LR+ = sensibilite/(1-specificite).</p></div>
+<div class="card"><h3>Lissage de Laplace</h3><p>Quand une probabilite vaut 0 (evenement non observe), on ajoute 1 au numerateur et k (nombre de classes) au denominateur. Evite les probabilites nulles.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge eval">THEORIE EVALUATION</span><div class="slide-title">Metriques — Les points essentiels a retenir</div></div>
+<div class="grid-2">
+<div class="card"><h3>Matrice de confusion</h3><table><tr><th></th><th>Predit+</th><th>Predit-</th></tr><tr><td>Reel+</td><td>TP</td><td>FN</td></tr><tr><td>Reel-</td><td>FP</td><td>TN</td></tr></table></div>
+<div class="card"><h3>Metriques cles</h3><p><strong>Sensibilite</strong> = TP/(TP+FN)<br><strong>Specificite</strong> = TN/(TN+FP)<br><strong>Precision</strong> = TP/(TP+FP)<br><strong>F1</strong> = 2PR/(P+R)<br><strong>FPR</strong> = FP/(FP+TN)</p></div>
+<div class="card"><h3>Quand utiliser quoi ?</h3><p>Classes equilibrees → Accuracy. Desequilibrees → F1, AUC. Faux negatifs couteux → maximiser Rappel. Faux positifs couteux → maximiser Precision.</p></div>
+<div class="card"><h3>Courbe ROC / AUC</h3><p>ROC : Sensibilite vs (1-Specificite) pour tous les seuils. AUC=1 parfait, AUC=0.5 aleatoire. L'AUC est independante du seuil de decision.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge logreg">THEORIE REGRESSION LOGISTIQUE</span><div class="slide-title">Regression Logistique — Les points essentiels</div></div>
+<div class="grid-2">
+<div class="card"><h3>Modele</h3><p>P(Y=1|X) = 1/(1+e<sup>-z</sup>) ou z = &beta;<sub>0</sub> + &Sigma;&beta;<sub>i</sub>X<sub>i</sub>. La sigmoide transforme le score lineaire en <strong>probabilite</strong>.</p></div>
+<div class="card"><h3>Frontiere</h3><p>P=0.5 ↔ z=0. La frontiere est <strong>lineaire</strong> : &beta;<sub>0</sub> + &Sigma;&beta;<sub>i</sub>X<sub>i</sub> = 0.</p></div>
+<div class="card"><h3>Interpretation</h3><p>e<sup>&beta;<sub>i</sub></sup> = odds ratio pour X<sub>i</sub>. &beta;<sub>i</sub> > 0 → X<sub>i</sub> augmente la probabilite de Y=1. &beta;<sub>i</sub> < 0 → X<sub>i</sub> la diminue.</p></div>
+<div class="card"><h3>Fonction de cout</h3><p>Cross-entropy (log-loss) : -&Sigma;[y<sub>i</sub>log(p<sub>i</sub>)+(1-y<sub>i</sub>)log(1-p<sub>i</sub>)]. Convexe → un seul minimum global.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge tree">THEORIE ARBRE DE DECISION</span><div class="slide-title">Arbre de Decision — Les points essentiels</div></div>
+<div class="grid-2">
+<div class="card"><h3>Construction</h3><p>A chaque noeud, choisir l'attribut qui maximise le <strong>gain d'information</strong>. IG = H(Parent) - H(Enfants). H = -&Sigma;p<sub>i</sub>log<sub>2</sub>p<sub>i</sub>.</p></div>
+<div class="card"><h3>Entropie</h3><p>Mesure l'<strong>incertitude</strong>. H=0 → ensemble pur (une seule classe). H=1 → incertitude maximale (2 classes equiprobables).</p></div>
+<div class="card"><h3>Sur-apprentissage</h3><p>Arbre trop profond = memorise le bruit. Solutions : profondeur max, min echantillons/feuille, elagage. L'erreur de validation remonte quand l'arbre est trop profond.</p></div>
+<div class="card"><h3>Avantages/Inconvenients</h3><p>+ Interpretable, pas de normalisation, gere les variables categorielles. - Instable (petit changement → arbre different), tendance au sur-apprentissage.</p></div>
+</div>""")
+
+# ===================== COMPARISON SLIDES =====================
+
+add("""<div class="slide-header"><span class="section-badge exo">COMPARAISON</span><div class="slide-title">Lineaire vs Non lineaire — Quel modele pour quel probleme ?</div></div>
+<div class="grid-2">
+<div class="card"><h3>Modeles lineaires</h3><p><strong>SVM lineaire</strong> : hyperplan optimal, marge maximale.<br><strong>Regression Logistique</strong> : probabilite + lineaire.<br><strong>Bayes naif (certaines variantes)</strong><br><br>Utiliser quand les donnees sont (presque) lineairement separables.</p></div>
+<div class="card"><h3>Modeles non lineaires</h3><p><strong>SVM avec noyau RBF/polynomial</strong> : frontieres courbes.<br><strong>KNN</strong> : decision locale quelconque.<br><strong>Arbre de Decision</strong> : frontieres rectangulaires.<br><br>Utiliser quand les donnees ne sont pas lineairement separables.</p></div>
+</div>
+<div class="warning-box mt-2"><strong>Regle pratique :</strong> Toujours essayer un modele lineaire d'abord (simple, rapide, interpretable). Passer au non lineaire seulement si la performance lineaire est insuffisante.</div>""")
+
+add("""<div class="slide-header"><span class="section-badge exo">COMPARAISON</span><div class="slide-title">Parametrique vs Non parametrique</div></div>
+<table><tr><th>Parametrique</th><th>Non parametrique</th></tr>
+<tr><td>Nombre fixe de parametres independant de N</td><td>Complexite qui grandit avec les donnees</td></tr>
+<tr><td>Hypotheses fortes sur la distribution</td><td>Peu ou pas d'hypotheses</td></tr>
+<tr><td>Plus efficace avec peu de donnees</td><td>Besoin de beaucoup de donnees</td></tr>
+<tr><td>Exemples : Regression Logistique, Bayes naif</td><td>Exemples : KNN, Arbre de Decision</td></tr>
+<tr><td>Risque : sous-apprentissage si hypothese fausse</td><td>Risque : sur-apprentissage si peu de donnees</td></tr></table>
+<div class="info-box mt-2">SVM est un cas intermediaire : parametrique en apparence, mais le nombre de vecteurs supports (qui definissent le modele) croit avec N.</div>""")
+
+# ===================== MORE EXERCISES =====================
+
+add(exo_header("33","svm","SVM : trouver w sans calcul de alpha (geometrique)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Points : P<sub>1</sub>=(2, 0) classe +1, P<sub>2</sub>=(0, 2) classe +1, N<sub>1</sub>=(-2, 0) classe -1, N<sub>2</sub>=(0, -2) classe -1.</p>
+<p><strong>1.</strong> Tracer mentalement les points. Quel hyperplan semble optimal ?</p>
+<p><strong>2.</strong> Donner w et b de l'hyperplan.</p>
+<p><strong>3.</strong> Identifier les vecteurs supports.</p>
+</div>""")
+
+add(corr_header("33","svm","Hyperplan par symetrie") + """<div class="correction-box">
+<div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Les points positifs sont sur les axes positifs, les negatifs sur les axes negatifs. Par symetrie, l'hyperplan optimal passe par l'origine et est incline a 45&deg; : <strong>x<sub>1</sub> + x<sub>2</sub> = 0</strong>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">w = <span class="result-highlight">(1, 1)</span>, b = <span class="result-highlight">0</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Tous les points sont a distance ||w|| = &radic;2 de l'origine. Les 4 points sont <span class="result-highlight">vecteurs supports</span> (equidistants de la frontiere).</div></div>
+</div>""")
+
+add(exo_header("34","knn","KNN et malediction de la dimension (QCM)","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Pourquoi la distance euclidienne devient-elle moins discriminante en haute dimension ?</p>
+<p><strong>2.</strong> Avec 1000 dimensions, quelle est la distance typique entre 2 points aleatoires (chacune des 1000 coordonnees est uniforme dans [0,1]) ?</p>
+<p><strong>3.</strong> Que faire si on a beaucoup de dimensions ?</p>
+</div>""")
+
+add(corr_header("34","knn","Malediction de la dimension") + """<div class="correction-box">
+<div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">En haute dimension, le volume de l'espace croit exponentiellement. Les distances entre points deviennent toutes <strong>similaires</strong> (concentration). Le rapport (d<sub>max</sub>-d<sub>min</sub>)/d<sub>min</sub> tend vers 0. Le plus proche voisin n'est pas significativement plus proche que le plus eloigne.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">L'esperance de la distance euclidienne au carre entre 2 points aleatoires dans [0,1]<sup>d</sup> est d/6. Pour d=1000, E[d<sup>2</sup>] &asymp; 167, donc d &asymp; <strong>12.9</strong>. Toutes les distances se concentrent autour de cette valeur. L'ecart-type relatif est faible.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Solutions : <strong>reduction de dimension</strong> (ACP, selection de variables), utilisation de <strong>distances robustes</strong> (cosinus), ou passer a des modeles parametriques moins sensibles a la dimension.</div></div>
+</div>""")
+
+add(exo_header("35","eval","Courbe ROC : interpretation des seuils","Moyen") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Un classifieur produit les scores suivants pour 5 exemples de test :</p>
+<table><tr><th>Exemple</th><th>Score</th><th>Vraie classe</th></tr>
+<tr><td>E<sub>1</sub></td><td>0.9</td><td>1</td></tr>
+<tr><td>E<sub>2</sub></td><td>0.8</td><td>0</td></tr>
+<tr><td>E<sub>3</sub></td><td>0.7</td><td>1</td></tr>
+<tr><td>E<sub>4</sub></td><td>0.4</td><td>0</td></tr>
+<tr><td>E<sub>5</sub></td><td>0.3</td><td>1</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Calculer TPR et FPR pour un seuil de 0.5.</p>
+<p><strong>2.</strong> Calculer TPR et FPR pour un seuil de 0.75.</p>
+<p><strong>3.</strong> Quel point de la courbe ROC correspond au meilleur compromis ?</p>
+</div>""")
+
+add(corr_header("35","eval","Courbe ROC et seuils") + """<div class="correction-box">
+<div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Seuil 0.5 :</strong> Predits positifs : E<sub>1</sub>(0.9, vrai 1), E<sub>2</sub>(0.8, vrai 0), E<sub>3</sub>(0.7, vrai 1). Predits negatifs : E<sub>4</sub>(0.4, vrai 0), E<sub>5</sub>(0.3, vrai 1).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">TP=2 (E<sub>1</sub>, E<sub>3</sub>), FN=1 (E<sub>5</sub>), FP=1 (E<sub>2</sub>), TN=1 (E<sub>4</sub>). Total Positifs=3, Total Negatifs=2.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>TPR (sensibilite) :</strong> 2/3 = <span class="result-highlight">0.667</span>. <strong>FPR :</strong> 1/2 = <span class="result-highlight">0.500</span>. Point ROC = (0.500, 0.667).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Seuil 0.75 :</strong> Predits positifs : E<sub>1</sub>(0.9, vrai 1), E<sub>2</sub>(0.8, vrai 0). TP=1, FN=2, FP=1, TN=1. TPR=1/3=<span class="result-highlight">0.333</span>, FPR=1/2=<span class="result-highlight">0.500</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Seuil 0.5</strong> donne un meilleur compromis (TPR plus eleve pour le meme FPR). Le seuil optimal depend du cout relatif FP/FN. Ici 0.5 capture 2/3 des positifs contre 1/3 pour 0.75.</div></div>
+</div>""")
+
+add(exo_header("36","tree","Entropie et IG — second exemple","Facile") + """<div class="exo-box">
+<div class="exo-title">Enonce</div>
+<p>Dataset : 6 exemples, Y=1 : 4, Y=0 : 2.</p>
+<p>Split sur X : X=0 → 3 exemples (tous Y=1), X=1 → 3 exemples (1 Y=1, 2 Y=0).</p>
+<p><strong>1.</strong> Calculer H(Parent).</p>
+<p><strong>2.</strong> Calculer les entropies des enfants.</p>
+<p><strong>3.</strong> Calculer le gain d'information IG(X).</p>
+</div>""")
+
+add(corr_header("36","tree","Entropie et gain d'information") + """<div class="correction-box">
+<div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">H(Parent) = -4/6&times;log<sub>2</sub>(4/6) - 2/6&times;log<sub>2</sub>(2/6) = -0.667&times;(-0.585) - 0.333&times;(-1.585) = 0.390 + 0.528 = <span class="result-highlight">0.918</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">X=0 : 3/3 Y=1 → H = <span class="result-highlight">0</span> (noeud pur). X=1 : 1/3 Y=1, 2/3 Y=0 → meme que parent = <span class="result-highlight">0.918</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">H ponderee = (3/6)&times;0 + (3/6)&times;0.918 = <strong>0.459</strong>. IG = 0.918 - 0.459 = <span class="result-highlight">0.459 bits</span>. Bon split car X=0 donne un noeud pur.</div></div>
+</div>""")
+
+# ===================== FINAL SLIDES =====================
+
+add("""<div class="text-center">
+<div class="slide-header"><span class="section-badge">STRATEGIE</span><div class="slide-title">Strategie pour l'examen — Par ou commencer ?</div></div>
+<div class="grid-3">
+<div class="card"><h3>Etape 1 — Cours (15 min)</h3><p>QCM et definitions : parametrique/non parametrique, SVM maximise quoi, KNN proprietes, entropie, sensibilite vs specificite. <strong>Rapide et rentable.</strong></p></div>
+<div class="card"><h3>Etape 2 — Calculs (25 min)</h3><p>SVM (calcul de w, classification), matrice de confusion (TP, TN, FP, FN, metriques), KNN (distances, vote). <strong>Methodique, points assures.</strong></p></div>
+<div class="card"><h3>Etape 3 — Reflexion (20 min)</h3><p>Choix de modele, interpretation, compromis. Expliquer POURQUOI. Une phrase d'interpretation = des points. <strong>Montrer la comprehension.</strong></p></div>
+</div>
+<div class="success-box mt-2 text-center"><strong>Ne paniquez pas :</strong> ecrivez la procedure meme si vous n'avez pas le resultat final. La demarche vaut des points.</div>
+</div>""")
+
+add("""<div class="text-center">
+<div class="hero-title">Bonne revision !</div>
+<div class="hero-subtitle">36 exercices corriges pas a pas<br>SVM (8) • KNN (7) • Bayes (5) • Evaluation (8) • Regression Logistique (4) • Arbres de Decision (4)<br>+ Fiches theoriques et tableaux comparatifs</div>
+<div class="mt-2"><span class="section-badge">Utilisez ← → ou Espace pour naviguer</span></div>
+<div class="text-small mt-2">Repo GitHub : <code>github.com/akiroussama/supcom-ia-doctorat</code><br>M. Riadh ABDELFATTAH — SUPCOM Doctorat 2026</div>
+</div>""")
+
+print(f"Slides built: {sid[0]}")
+print(f"Writing to {OUT}...")
+
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write(HEADER)
+    for s in S:
+        f.write(s)
+    f.write(FOOTER)
+
+print(f"Done! {sid[0]} slides in {OUT}")
+print(f"File size: {OUT.stat().st_size / 1024:.1f} KB")

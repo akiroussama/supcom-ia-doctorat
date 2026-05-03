@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Révision Classification Supervisée — SupCom 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root {
+  --primary:#1e40af;--primary-dark:#1e3a8a;--accent-green:#10b981;--accent-orange:#f59e0b;
+  --accent-purple:#7c3aed;--accent-cyan:#06b6d4;--accent-red:#ef4444;
+  --text-main:#1e293b;--text-muted:#64748b;--bg-main:#f8fafc;--bg-card:#ffffff;
+  --border-light:#e2e8f0;--glass-border:rgba(30,64,175,0.08);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg:0 10px 30px rgba(0,0,0,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-main);color:var(--text-main);overflow:hidden;height:100vh;}
+header{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);border-bottom:2px solid rgba(30,64,175,0.1);box-shadow:0 4px 20px rgba(0,0,0,0.08);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2.5rem;z-index:100;}
+.header-center{justify-self:center;text-align:center;}
+.logo{font-family:'Outfit';font-weight:700;font-size:1.1rem;color:var(--text-main);}
+.logo-sub{display:block;font-size:0.7rem;font-weight:400;color:var(--text-muted);letter-spacing:0.5px;}
+.slide{position:absolute;top:60px;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateX(60px);transition:all 0.5s cubic-bezier(0.16,1,0.3,1);pointer-events:none;padding:1.2rem 2.5rem;}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all;}
+.slide.prev{opacity:0;transform:translateX(-60px);}
+.content-single,.content-full{width:100%;max-width:1100px;}
+.content-full{max-width:1200px;}
+.slide-header{margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:2px solid var(--glass-border);}
+.slide-title{font-family:'Outfit';font-weight:800;font-size:1.7rem;color:var(--text-main);letter-spacing:-0.02em;}
+.section-badge{display:inline-block;padding:0.25rem 0.75rem;background:rgba(30,64,175,0.08);color:var(--primary);border-radius:20px;font-size:0.8rem;font-weight:600;margin-bottom:0.4rem;letter-spacing:0.5px;}
+.section-badge.exo{background:rgba(16,185,129,0.08);color:var(--accent-green);}
+.section-badge.correction{background:rgba(239,68,68,0.08);color:var(--accent-red);}
+.section-badge.svm{background:rgba(124,58,237,0.08);color:var(--accent-purple);}
+.section-badge.knn{background:rgba(16,185,129,0.08);color:var(--accent-green);}
+.section-badge.bayes{background:rgba(245,158,11,0.08);color:var(--accent-orange);}
+.section-badge.eval{background:rgba(6,182,212,0.08);color:var(--accent-cyan);}
+.level-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;margin-left:0.5rem;}
+.level-easy{background:rgba(16,185,129,0.12);color:#059669;}
+.level-medium{background:rgba(245,158,11,0.12);color:#d97706;}
+.level-hard{background:rgba(239,68,68,0.12);color:#dc2626;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow-sm);}
+.card h3{font-family:'Outfit';font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;}
+.card p,.card li{font-size:0.9rem;color:var(--text-muted);line-height:1.5;}
+.formula-box{background:rgba(30,64,175,0.03);border:2px solid rgba(30,64,175,0.12);border-radius:14px;padding:1.2rem;margin:0.8rem 0;}
+.formula-box .title{font-family:'Outfit';font-weight:700;font-size:0.9rem;margin-bottom:0.6rem;color:var(--primary);}
+.exo-box{background:rgba(16,185,129,0.03);border:2px solid rgba(16,185,129,0.15);border-radius:14px;padding:1.2rem;margin:0.8rem 0;}
+.exo-box .exo-title{font-family:'Outfit';font-weight:700;font-size:1rem;color:var(--accent-green);margin-bottom:0.6rem;}
+.correction-box{background:rgba(239,68,68,0.02);border:2px solid rgba(239,68,68,0.12);border-radius:14px;padding:1.2rem;margin:0.8rem 0;}
+.correction-box .corr-title{font-family:'Outfit';font-weight:700;font-size:1rem;color:var(--accent-red);margin-bottom:0.6rem;}
+.step-row{display:flex;align-items:flex-start;gap:0.6rem;margin:0.5rem 0;}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fira Code';font-weight:700;font-size:0.85rem;color:white;flex-shrink:0;background:var(--primary);}
+.step-text{font-size:0.9rem;line-height:1.6;}
+table{width:100%;border-collapse:collapse;margin:0.8rem 0;font-size:0.9rem;}
+th{background:var(--primary);color:white;padding:0.6rem 0.8rem;text-align:center;font-weight:600;font-size:0.8rem;}
+td{padding:0.5rem 0.8rem;text-align:center;border:1px solid var(--border-light);}
+tr:nth-child(even){background:rgba(30,64,175,0.02);}
+.info-box{background:rgba(6,182,212,0.05);border-left:4px solid var(--accent-cyan);padding:0.8rem 1.2rem;border-radius:0 12px 12px 0;margin:0.6rem 0;font-size:0.9rem;}
+.warning-box{background:rgba(245,158,11,0.05);border-left:4px solid var(--accent-orange);padding:0.8rem 1.2rem;border-radius:0 12px 12px 0;margin:0.6rem 0;font-size:0.9rem;}
+.success-box{background:rgba(16,185,129,0.05);border-left:4px solid var(--accent-green);padding:0.8rem 1.2rem;border-radius:0 12px 12px 0;margin:0.6rem 0;font-size:0.9rem;}
+.result-highlight{font-family:'Fira Code';background:rgba(124,58,237,0.08);padding:0.15rem 0.5rem;border-radius:6px;font-weight:600;color:var(--accent-purple);}
+.hero-title{font-family:'Outfit';font-weight:900;font-size:2.5rem;line-height:1.1;color:var(--text-main);letter-spacing:-0.03em;}
+.hero-title .accent{background:linear-gradient(135deg,var(--accent-green),var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-subtitle{font-size:1rem;color:var(--text-muted);max-width:700px;margin:0.8rem auto;line-height:1.6;}
+.text-center{text-align:center;}
+.text-small{font-size:0.85rem;color:var(--text-muted);}
+.mb-1{margin-bottom:0.5rem;}.mb-2{margin-bottom:1rem;}.mt-1{margin-top:0.5rem;}.mt-2{margin-top:1rem;}
+.keyword{color:var(--accent-purple);font-weight:600;}
+.answer{color:var(--accent-green);font-weight:600;}
+nav{position:fixed;bottom:0;left:0;right:0;height:48px;background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);border-top:2px solid rgba(30,64,175,0.1);display:flex;align-items:center;justify-content:center;gap:1rem;z-index:100;padding:0 1.5rem;}
+nav button{background:var(--primary);color:white;border:none;padding:0.4rem 1.2rem;border-radius:8px;cursor:pointer;font-family:'Inter';font-weight:600;font-size:0.8rem;transition:all 0.2s;}
+nav button:hover{background:var(--primary-dark);}
+nav button:disabled{opacity:0.3;cursor:default;}
+nav .page-indicator{font-family:'Fira Code';font-size:0.85rem;color:var(--text-muted);}
+nav .progress-bar{width:200px;height:6px;background:var(--border-light);border-radius:3px;overflow:hidden;}
+nav .progress-fill{height:100%;background:var(--primary);border-radius:3px;transition:width 0.3s;}
+@media(max-width:768px){.slide{padding:0.8rem 1rem;}.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.slide-title{font-size:1.3rem;}.hero-title{font-size:1.8rem;}}
+</style>
+</head>
+<body>
+
+<header>
+<div style="justify-self:start"></div>
+<div class="header-center">
+  <span class="logo">Classification Supervisée</span>
+  <span class="logo-sub">RÉVISION EXAMEN — SUPCOM DOCTORAT 2026</span>
+</div>
+<div style="justify-self:end;font-size:0.8rem;color:var(--text-muted);">M. Riadh ABDELFATTAH</div>
+</header>
+
+<div id="slide-container">
+
+<!-- ====== SLIDE 1: TITRE ====== -->
+<div class="slide active" id="s1"><div class="content-single text-center">
+<div class="hero-title">Révision <span class="accent">Classification Supervisée</span></div>
+<div class="hero-subtitle">KNN • Bayes • SVM • Régression Logistique • Arbres de Décision<br>Matrice de Confusion • Sensibilité • Spécificité</div>
+<div class="text-small mt-2">32 exercices corrigés pas à pas — Niveaux Facile / Moyen<br>Basé sur les annales 2021 & 2023</div>
+<div class="mt-2"><span class="section-badge">Utilisez les flèches ← → pour naviguer</span></div>
+</div></div>
+
+<!-- ====== SLIDE 2: SOMMAIRE ====== -->
+<div class="slide" id="s2"><div class="content-single">
+<div class="slide-header"><span class="section-badge">PLAN</span><div class="slide-title">Sommaire de la révision</div></div>
+<div class="grid-3">
+<div class="card"><h3>Partie 1 — SVM</h3><p>7 exercices<br>Hyperplan, w, marge, classification, dual, noyaux, soft/hard margin</p></div>
+<div class="card"><h3>Partie 2 — KNN</h3><p>6 exercices<br>Distance, vote, K optimal, normalisation, classification</p></div>
+<div class="card"><h3>Partie 3 — Bayes</h3><p>5 exercices<br>Probabilités conditionnelles, Bayes naïf, cotes (odds)</p></div>
+<div class="card"><h3>Partie 4 — Évaluation</h3><p>6 exercices<br>Matrice de confusion, sensibilité, spécificité, F1-score</p></div>
+<div class="card"><h3>Partie 5 — Régression Logistique</h3><p>4 exercices<br>Sigmoïde, frontière de décision, odds ratio</p></div>
+<div class="card"><h3>Partie 6 — Arbre de Décision</h3><p>4 exercices<br>Entropie, gain d'information, splits</p></div>
+</div>
+<div class="info-box mt-2">Chaque exercice est suivi d'une <strong>correction détaillée étape par étape</strong> sur le slide suivant.</div>
+</div></div>
