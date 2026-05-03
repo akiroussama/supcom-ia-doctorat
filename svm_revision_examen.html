@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVM Examen - Revision Opportuniste</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --green: #059669;
+            --orange: #d97706;
+            --purple: #7c3aed;
+            --red: #dc2626;
+            --cyan: #0891b2;
+            --ink: #172033;
+            --muted: #64748b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #dbe4f0;
+            --soft-blue: rgba(30, 64, 175, 0.08);
+            --shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            font-family: Inter, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 100;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            padding: 0 2.4rem;
+            background: rgba(255, 255, 255, 0.98);
+            border-bottom: 2px solid rgba(30, 64, 175, 0.10);
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .header-left {
+            justify-self: start;
+            font-family: Outfit, sans-serif;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .header-center {
+            justify-self: center;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .course-title {
+            display: block;
+            font-family: Outfit, sans-serif;
+            font-weight: 800;
+            font-size: 1.04rem;
+        }
+
+        .course-subtitle {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .header-right {
+            justify-self: end;
+            text-align: right;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .header-right strong {
+            display: block;
+            color: var(--primary);
+            font-family: Outfit, sans-serif;
+            font-size: 0.94rem;
+        }
+
+        main {
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 3rem 5.4rem;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(54px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+
+        .slide.prev {
+            transform: translateX(-54px);
+        }
+
+        .content {
+            width: min(1180px, 100%);
+            transform-origin: center center;
+        }
+
+        .narrow {
+            width: min(980px, 100%);
+            transform-origin: center center;
+        }
+
+        .slide-header {
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--soft-blue);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.28rem 0.72rem;
+            border-radius: 999px;
+            background: var(--soft-blue);
+            color: var(--primary);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .badge.green {
+            background: rgba(5, 150, 105, 0.10);
+            color: var(--green);
+        }
+
+        .badge.orange {
+            background: rgba(217, 119, 6, 0.11);
+            color: var(--orange);
+        }
+
+        .badge.purple {
+            background: rgba(124, 58, 237, 0.10);
+            color: var(--purple);
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: Outfit, sans-serif;
+            margin: 0;
+            color: var(--ink);
+        }
+
+        h1 {
+            font-size: 3.3rem;
+            line-height: 1.05;
+            font-weight: 900;
+        }
+
+        h2 {
+            margin-top: 0.35rem;
+            font-size: 1.9rem;
+            line-height: 1.12;
+            font-weight: 850;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        p {
+            margin: 0;
+            line-height: 1.55;
+        }
+
+        .lead {
+            margin-top: 1rem;
+            max-width: 760px;
+            color: var(--muted);
+            font-size: 1.12rem;
+        }
+
+        .grid-2,
+        .grid-3,
+        .grid-4 {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .card,
+        .box,
+        .formula,
+        .answer,
+        .exercise {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+        }
+
+        .card strong,
+        .box strong,
+        .answer strong,
+        .exercise strong {
+            color: var(--ink);
+        }
+
+        .box.blue {
+            border-left: 5px solid var(--primary);
+            background: rgba(30, 64, 175, 0.045);
+        }
+
+        .box.green {
+            border-left: 5px solid var(--green);
+            background: rgba(5, 150, 105, 0.055);
+        }
+
+        .box.orange {
+            border-left: 5px solid var(--orange);
+            background: rgba(217, 119, 6, 0.055);
+        }
+
+        .box.red {
+            border-left: 5px solid var(--red);
+            background: rgba(220, 38, 38, 0.045);
+        }
+
+        .formula {
+            border: 2px solid rgba(124, 58, 237, 0.16);
+            background: rgba(124, 58, 237, 0.045);
+            text-align: center;
+            font-size: 1.12rem;
+        }
+
+        .formula.small {
+            font-size: 0.96rem;
+            padding: 0.7rem;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .mt {
+            margin-top: 1rem;
+        }
+
+        .mt-sm {
+            margin-top: 0.55rem;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.92rem;
+        }
+
+        th,
+        td {
+            padding: 0.56rem 0.7rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 0.77rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: #f8fafc;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mono {
+            font-family: "Fira Code", monospace;
+            font-weight: 600;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 2.1rem 1fr;
+            gap: 0.65rem;
+            align-items: start;
+            margin-top: 0.62rem;
+        }
+
+        .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 999px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.82rem;
+            font-weight: 800;
+            background: var(--primary);
+            color: white;
+        }
+
+        .num.green {
+            background: var(--green);
+        }
+
+        .num.orange {
+            background: var(--orange);
+        }
+
+        .num.purple {
+            background: var(--purple);
+        }
+
+        .answer {
+            border-color: rgba(5, 150, 105, 0.28);
+            background: rgba(5, 150, 105, 0.05);
+        }
+
+        .teacher-note {
+            background: #fff7ed;
+            border: 1px solid rgba(217, 119, 6, 0.28);
+            border-left: 5px solid var(--orange);
+            border-radius: 8px;
+            padding: 0.9rem 1rem;
+        }
+
+        .slow-list {
+            margin: 0.4rem 0 0;
+            padding-left: 1.2rem;
+            line-height: 1.55;
+        }
+
+        .slow-list li {
+            margin: 0.24rem 0;
+        }
+
+        .worked {
+            background: #f0fdf4;
+            border: 1px solid rgba(5, 150, 105, 0.26);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+        }
+
+        .mistake {
+            background: #fef2f2;
+            border: 1px solid rgba(220, 38, 38, 0.22);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+        }
+
+        .tiny {
+            font-size: 0.86rem;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.7rem;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.9rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(30, 64, 175, 0.08);
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 0.82rem;
+        }
+
+        details {
+            margin-top: 0.6rem;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 800;
+            color: var(--green);
+        }
+
+        .exam-strip {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.1rem;
+        }
+
+        .exam-card {
+            border-radius: 8px;
+            padding: 1rem;
+            color: white;
+            min-height: 132px;
+        }
+
+        .exam-card.blue {
+            background: linear-gradient(135deg, var(--primary), #2563eb);
+        }
+
+        .exam-card.purple {
+            background: linear-gradient(135deg, var(--purple), #9333ea);
+        }
+
+        .exam-card .score {
+            font-family: "Fira Code", monospace;
+            font-weight: 800;
+            font-size: 1.7rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .diagram {
+            width: 100%;
+            min-height: 260px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .progress-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 3px;
+            background: rgba(30, 64, 175, 0.11);
+            z-index: 250;
+        }
+
+        .progress-fill {
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--green), var(--orange));
+            transition: width 0.25s ease;
+        }
+
+        nav {
+            position: fixed;
+            bottom: 1.9rem;
+            left: 50%;
+            z-index: 220;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transform: translateX(-50%);
+            padding: 0.58rem 1.2rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+        }
+
+        .nav-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            border: 0;
+            background: transparent;
+            color: var(--primary);
+            font-size: 1.18rem;
+            cursor: pointer;
+        }
+
+        .nav-btn:last-child {
+            width: auto;
+            padding: 0 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+
+        .nav-btn:hover {
+            background: var(--soft-blue);
+        }
+
+        .counter {
+            color: var(--muted);
+            font-family: "Fira Code", monospace;
+            font-size: 0.83rem;
+        }
+
+        .source-list a {
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .source-list a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 900px) {
+            header {
+                padding: 0 1rem;
+                grid-template-columns: 1fr;
+            }
+
+            .header-left,
+            .header-right {
+                display: none;
+            }
+
+            .slide {
+                padding: 1rem 1rem 5rem;
+            }
+
+            h1 {
+                font-size: 2.35rem;
+            }
+
+            .grid-2,
+            .grid-3,
+            .grid-4,
+            .exam-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            @page {
+                size: landscape;
+                margin: 0;
+            }
+
+            body {
+                height: auto;
+                overflow: visible;
+                background: white;
+            }
+
+            header,
+            nav,
+            .progress-bar {
+                display: none !important;
+            }
+
+            .slide {
+                position: relative !important;
+                top: auto !important;
+                left: auto !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: 100vw;
+                height: 100vh;
+                opacity: 1 !important;
+                transform: none !important;
+                pointer-events: auto !important;
+                page-break-after: always;
+                padding: 1.2rem 2.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-left">SupCom 2026</div>
+        <div class="header-center">
+            <span class="course-title">SVM pour devoirs</span>
+            <span class="course-subtitle">Revision Partie II - apprentissage supervise</span>
+        </div>
+        <div class="header-right">
+            <span>Objectif</span>
+            <strong>3.5/4 a 5 pts</strong>
+        </div>
+    </header>
+
+    <main>
+        <section class="slide active">
+            <div class="content center">
+                <span class="badge">Plan opportuniste</span>
+                <h1>SVM sans theorie inutile</h1>
+                <p class="lead" style="margin-left:auto;margin-right:auto;">
+                    On apprend uniquement ce qui permet de gagner les points dans les sujets 2021 et 2023:
+                    hyperplan, marge, vecteurs supports, dual donne, classification d'un nouveau point et
+                    quelques QCM pieges.
+                </p>
+                <div class="exam-strip">
+                    <div class="exam-card blue">
+                        <div class="score">2021: 6 pts</div>
+                        <p>Contraintes de separabilite, hyperplan optimal, equation primale/duale, valeurs des $\alpha_i$.</p>
+                    </div>
+                    <div class="exam-card purple">
+                        <div class="score">2023: 6 pts</div>
+                        <p>Vecteurs supports, calcul de $w$, equation de l'hyperplan, classification d'un point test.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Mode d'emploi</span>
+                    <h2>Comment lire ce support sans se perdre</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>Pas un cours complet</h3>
+                        <p class="mt-sm">On ne cherche pas a devenir specialiste SVM. On cherche a reconnaitre le type de question et appliquer la bonne recette.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Une notion = exemples</h3>
+                        <p class="mt-sm">Chaque notion est suivie de mini-exercices tres simples, puis d'une correction lente.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Objectif copie</h3>
+                        <p class="mt-sm">A la fin, tu dois pouvoir ecrire une reponse claire, meme si tu ne comprends pas toute la theorie.</p>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    <strong>Phrase a retenir:</strong> en SVM, presque tout revient a calculer une droite, regarder
+                    de quel cote est un point, puis expliquer proprement la decision.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Barème mental</span>
+                    <h2>Comment transformer un problème SVM en points faciles</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr><th>Partie de la question</th><th>Ce que le correcteur attend</th><th>Points faciles</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Contraintes</td><td>Ecrire $y_i(w^Tx_i+b)\geq 1$ puis remplacer les points.</td><td>Oui, mecanique</td></tr>
+                        <tr><td>Calcul de $w$</td><td>Utiliser $w=\sum\alpha_i y_i x_i$ sans oublier les signes.</td><td>Oui, arithmetique</td></tr>
+                        <tr><td>Hyperplan</td><td>Ecrire $w_1x_1+w_2x_2+b=0$.</td><td>Oui, substitution</td></tr>
+                        <tr><td>Classe d'un point</td><td>Calculer $f(x)$ et conclure avec le signe.</td><td>Oui, tres rentable</td></tr>
+                        <tr><td>Interprétation</td><td>Dire marge maximale, vecteurs supports, dual/noyau si demande.</td><td>Oui, phrase courte</td></tr>
+                    </tbody>
+                </table>
+                <div class="box blue mt">
+                    Même si tu bloques sur une sous-question, écris la recette générale. En examen, une formule
+                    bien posée et une phrase de décision peuvent sauver une grande partie des points.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Lexique anti-panique</span>
+                    <h2>Les mots compliqués traduits en langage simple</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Hyperplan</h3>
+                        <p class="mt-sm">En 2D, c'est juste une droite. En 3D, c'est un plan. En dimension plus grande, on garde le mot hyperplan.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Marge</h3>
+                        <p class="mt-sm">C'est le couloir vide autour de la frontière. SVM veut le couloir le plus large possible.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Vecteurs supports</h3>
+                        <p class="mt-sm">Ce sont les points qui touchent le couloir. Si on les bouge, la frontière change.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Dual</h3>
+                        <p class="mt-sm">Une autre façon de calculer le même SVM, très utile parce qu'elle permet les noyaux.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Carte du devoir</span>
+                    <h2>Ce qu'il faut savoir faire, dans l'ordre rentable</h2>
+                </div>
+                <div class="grid-4">
+                    <div class="card">
+                        <h3>1. Lire une frontiere</h3>
+                        <p class="muted mt-sm">Savoir utiliser $f(x)=w^Tx+b$ et le signe pour classer.</p>
+                    </div>
+                    <div class="card">
+                        <h3>2. Dessiner les marges</h3>
+                        <p class="muted mt-sm">Hyperplan $=0$, marges $=+1$ et $=-1$, points supports dessus.</p>
+                    </div>
+                    <div class="card">
+                        <h3>3. Calculer $w$</h3>
+                        <p class="muted mt-sm">Quand les $\alpha_i$ sont donnes: $w=\sum_i \alpha_i y_i x_i$.</p>
+                    </div>
+                    <div class="card">
+                        <h3>4. Repondre au QCM</h3>
+                        <p class="muted mt-sm">Marge maximale, dual, noyau, hard/soft margin, role de $C$.</p>
+                    </div>
+                </div>
+                <div class="box orange mt">
+                    <strong>Regle de revision:</strong> si tu ne peux pas resoudre les exercices 2021 et 2023 en
+                    moins de 20 minutes chacun, ne lis pas plus de theorie: refais les recettes.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Analogie</span>
+                    <h2>SVM comme un couloir entre deux groupes</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="teacher-note">
+                        <h3>Imagine une salle de classe</h3>
+                        <p class="mt-sm">Les étudiants de la classe $+1$ sont à gauche, ceux de la classe $-1$ sont à droite. Tu dois poser une bande au sol pour séparer les deux groupes.</p>
+                        <ul class="slow-list">
+                            <li>Une simple ligne qui sépare: c'est un classifieur linéaire.</li>
+                            <li>Une ligne avec beaucoup d'espace des deux côtés: c'est l'idée SVM.</li>
+                            <li>Les étudiants les plus proches de la bande décident où elle passe: ce sont les vecteurs supports.</li>
+                        </ul>
+                    </div>
+                    <div class="box green">
+                        <h3>Traduction examen</h3>
+                        <ul class="slow-list">
+                            <li>La bande du milieu: $w^Tx+b=0$.</li>
+                            <li>Les deux bords du couloir: $w^Tx+b=+1$ et $w^Tx+b=-1$.</li>
+                            <li>Classer un nouveau point: regarder de quel côté de la bande il tombe.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box orange mt">
+                    SVM n'est donc pas d'abord une formule. C'est une séparation avec le plus grand espace de sécurité.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Mini-exemple</span>
+                    <h2>Une frontière tellement simple qu'on la voit sans calcul</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <table>
+                            <thead><tr><th>Point</th><th>$x_1$</th><th>$x_2$</th><th>Classe</th></tr></thead>
+                            <tbody>
+                                <tr><td>A</td><td>0</td><td>3</td><td>+1</td></tr>
+                                <tr><td>B</td><td>2</td><td>3</td><td>+1</td></tr>
+                                <tr><td>C</td><td>0</td><td>1</td><td>-1</td></tr>
+                                <tr><td>D</td><td>2</td><td>1</td><td>-1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="exercise">
+                        <h3>Question</h3>
+                        <p class="mt-sm">Les points positifs sont tous sur la ligne $x_2=3$. Les négatifs sont tous sur la ligne $x_2=1$.</p>
+                        <p class="mt-sm">Où placer la frontière au milieu?</p>
+                        <div class="pill-row">
+                            <span class="pill">$x_2=1$</span>
+                            <span class="pill">$x_2=2$</span>
+                            <span class="pill">$x_2=3$</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="worked mt">
+                    <strong>Correction détaillée:</strong> la ligne du milieu entre $x_2=1$ et $x_2=3$ est $x_2=2$.
+                    On peut l'écrire $x_2-2=0$. Donc $w=(0,1)$ et $b=-2$.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Correction lente</span>
+                    <h2>Pourquoi $x_2=2$ est une bonne réponse</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>Etape 1</h3>
+                        <p class="mt-sm">Les points $+1$ ont $x_2=3$. Les points $-1$ ont $x_2=1$.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Etape 2</h3>
+                        <p class="mt-sm">Le milieu vertical est la moyenne: $(3+1)/2=2$.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Etape 3</h3>
+                        <p class="mt-sm">La frontière est donc la droite horizontale $x_2=2$, soit $x_2-2=0$.</p>
+                    </div>
+                </div>
+                <div class="grid-2 mt">
+                    <div class="worked">
+                        <strong>Test avec un positif:</strong> pour A(0,3), $f(A)=3-2=1>0$, donc $+1$.
+                    </div>
+                    <div class="worked">
+                        <strong>Test avec un négatif:</strong> pour C(0,1), $f(C)=1-2=-1<0$, donc $-1$.
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    <strong>Erreur à éviter:</strong> ne pas confondre $x_1$ et $x_2$. Ici la séparation est horizontale, donc elle dépend de $x_2$.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Intuition</span>
+                    <h2>SVM = une frontiere + une marge maximale</h2>
+                </div>
+                <div class="grid-2">
+                    <svg class="diagram" viewBox="0 0 720 390" role="img" aria-label="Diagramme SVM">
+                        <rect x="0" y="0" width="720" height="390" fill="#ffffff" />
+                        <g stroke="#dbe4f0" stroke-width="1">
+                            <path d="M80 20 V350" />
+                            <path d="M160 20 V350" />
+                            <path d="M240 20 V350" />
+                            <path d="M320 20 V350" />
+                            <path d="M400 20 V350" />
+                            <path d="M480 20 V350" />
+                            <path d="M560 20 V350" />
+                            <path d="M640 20 V350" />
+                            <path d="M40 70 H680" />
+                            <path d="M40 140 H680" />
+                            <path d="M40 210 H680" />
+                            <path d="M40 280 H680" />
+                            <path d="M40 350 H680" />
+                        </g>
+                        <path d="M190 350 L520 30" stroke="#1e40af" stroke-width="5" />
+                        <path d="M110 350 L440 30" stroke="#7c3aed" stroke-width="3" stroke-dasharray="10 8" />
+                        <path d="M270 350 L600 30" stroke="#7c3aed" stroke-width="3" stroke-dasharray="10 8" />
+                        <text x="505" y="58" fill="#1e40af" font-size="22" font-weight="800">w.x + b = 0</text>
+                        <text x="430" y="90" fill="#7c3aed" font-size="18" font-weight="700">+1</text>
+                        <text x="610" y="42" fill="#7c3aed" font-size="18" font-weight="700">-1</text>
+                        <g fill="#059669" stroke="#064e3b" stroke-width="2">
+                            <circle cx="145" cy="105" r="13" />
+                            <circle cx="215" cy="145" r="13" />
+                            <circle cx="245" cy="78" r="13" />
+                            <circle cx="305" cy="122" r="13" />
+                        </g>
+                        <g fill="#dc2626" stroke="#7f1d1d" stroke-width="2">
+                            <rect x="462" y="235" width="26" height="26" rx="4" />
+                            <rect x="530" y="270" width="26" height="26" rx="4" />
+                            <rect x="575" y="200" width="26" height="26" rx="4" />
+                            <rect x="405" y="305" width="26" height="26" rx="4" />
+                        </g>
+                        <circle cx="305" cy="122" r="22" fill="none" stroke="#f59e0b" stroke-width="4" />
+                        <rect x="462" y="235" width="26" height="26" rx="4" fill="none" stroke="#f59e0b" stroke-width="4" />
+                        <text x="55" y="373" fill="#64748b" font-size="16">Points entoures = vecteurs supports</text>
+                    </svg>
+                    <div>
+                        <div class="formula">
+                            $$f(x)=w^Tx+b$$
+                            <p class="muted">La classe est le signe de $f(x)$.</p>
+                        </div>
+                        <div class="step mt">
+                            <span class="num">1</span>
+                            <p><strong>Hyperplan:</strong> $w^Tx+b=0$.</p>
+                        </div>
+                        <div class="step">
+                            <span class="num green">2</span>
+                            <p><strong>Marges:</strong> $w^Tx+b=+1$ et $w^Tx+b=-1$.</p>
+                        </div>
+                        <div class="step">
+                            <span class="num orange">3</span>
+                            <p><strong>Vecteurs supports:</strong> points les plus proches, souvent sur les marges.</p>
+                        </div>
+                        <div class="box blue mt">
+                            Le sujet peut donner la formule. Ce qui rapporte les points: remplacer correctement,
+                            calculer le signe et conclure.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Débloquer le schéma</span>
+                    <h2>Comment lire le dessin SVM sans être matheux</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="box blue">
+                        <h3>Ce que tu regardes</h3>
+                        <ul class="slow-list">
+                            <li>Les ronds verts: une classe.</li>
+                            <li>Les carrés rouges: l'autre classe.</li>
+                            <li>La ligne bleue: la séparation.</li>
+                            <li>Les lignes pointillées: les bords de la marge.</li>
+                        </ul>
+                    </div>
+                    <div class="teacher-note">
+                        <h3>Ce que SVM choisit</h3>
+                        <p class="mt-sm">SVM ne choisit pas n'importe quelle séparation. Il choisit celle qui laisse le plus grand espace vide entre les deux classes.</p>
+                        <p class="mt-sm">C'est exactement ce qu'on appelle <strong>maximiser la marge</strong>.</p>
+                    </div>
+                </div>
+                <div class="worked mt">
+                    En devoir, si on te demande "que maximise SVM ?", la réponse utile est:
+                    <strong>la marge entre l'hyperplan et les points les plus proches des deux classes</strong>.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Exemple visuel</span>
+                    <h2>Quels points sont vraiment importants?</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Situation</h3>
+                        <p class="mt-sm">On a une frontière correcte. Trois points sont très loin de la frontière. Deux points sont collés aux marges.</p>
+                        <p class="mt-sm">Si on supprime un point très loin, la frontière change-t-elle beaucoup?</p>
+                        <p class="mt-sm">Si on déplace un point collé à la marge, la frontière change-t-elle?</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction détaillée</h3>
+                        <ul class="slow-list">
+                            <li>Un point très loin de la frontière ne décide presque pas la marge.</li>
+                            <li>Un point collé à la marge est critique: il limite la largeur du couloir.</li>
+                            <li>Ces points critiques sont les <strong>vecteurs supports</strong>.</li>
+                            <li>Dans le dual, ils ont généralement $\alpha_i>0$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    <strong>Piège:</strong> tous les points ne sont pas aussi importants. SVM dépend surtout des points les plus proches de la séparation.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Micro-exercice</span>
+                    <h2>Reconnaître une marge avec une fonction simple</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">On donne $f(x)=x_1+x_2-3$.</p>
+                        <p class="mt-sm">Dire si les points suivants sont sur l'hyperplan, sur une marge, ou ailleurs:</p>
+                        <table class="mt-sm">
+                            <thead><tr><th>Point</th><th>$f(x)$</th><th>Position</th></tr></thead>
+                            <tbody>
+                                <tr><td>A(1,2)</td><td>?</td><td>?</td></tr>
+                                <tr><td>B(2,2)</td><td>?</td><td>?</td></tr>
+                                <tr><td>C(1,1)</td><td>?</td><td>?</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction lente</h3>
+                        <p>A: $f(1,2)=1+2-3=0$. Donc A est sur l'hyperplan.</p>
+                        <p class="mt-sm">B: $f(2,2)=2+2-3=1$. Donc B est sur la marge positive.</p>
+                        <p class="mt-sm">C: $f(1,1)=1+1-3=-1$. Donc C est sur la marge négative.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Recette 1</span>
+                    <h2>Classer un nouveau point</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <div class="formula">
+                            $$\hat{y}=\text{sign}(w^Tx+b)$$
+                        </div>
+                        <div class="box green mt">
+                            <strong>Phrase d'examen:</strong> la fonction de decision est positive, donc le point
+                            est affecte a la classe $+1$. Si elle est negative, il est affecte a la classe $-1$.
+                        </div>
+                    </div>
+                    <div class="exercise">
+                        <h3>Exercice 1 - mise en chauffe</h3>
+                        <p class="mt-sm">Soit $f(x)=2x_1-x_2-1$. Classer:</p>
+                        <table class="mt-sm">
+                            <thead>
+                                <tr><th>Point</th><th>Calcul</th><th>Classe</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>A(2,1)</td><td>?</td><td>?</td></tr>
+                                <tr><td>B(0,1)</td><td>?</td><td>?</td></tr>
+                                <tr><td>C(1,1)</td><td>?</td><td>?</td></tr>
+                            </tbody>
+                        </table>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                Pour A(2,1), on remplace dans $2x_1-x_2-1$: $2\times2-1-1=2$.
+                                Le résultat est positif, donc A est classé $+1$. Pour B(0,1):
+                                $2\times0-1-1=-2$, résultat négatif, donc B est classé $-1$.
+                                Pour C(1,1): $2\times1-1-1=0$, le point est exactement sur l'hyperplan.
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Recette lente</span>
+                    <h2>Classer un point: toujours les mêmes 4 gestes</h2>
+                </div>
+                <div class="grid-4">
+                    <div class="card">
+                        <h3>1. Ecrire</h3>
+                        <p class="mt-sm">Je recopie $f(x)=w^Tx+b$ ou la fonction donnée.</p>
+                    </div>
+                    <div class="card">
+                        <h3>2. Remplacer</h3>
+                        <p class="mt-sm">Je remplace $x_1$, $x_2$ par les valeurs du point.</p>
+                    </div>
+                    <div class="card">
+                        <h3>3. Calculer</h3>
+                        <p class="mt-sm">Je fais l'addition et je regarde si le résultat est positif ou négatif.</p>
+                    </div>
+                    <div class="card">
+                        <h3>4. Conclure</h3>
+                        <p class="mt-sm">Positif: $+1$. Négatif: $-1$. Zéro: sur la frontière.</p>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    Le correcteur veut voir le calcul et la phrase de conclusion. Une réponse comme "$+1$" seule est fragile.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple corrigé 1</span>
+                    <h2>Classer quand la fonction est déjà donnée</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">On donne $f(x)=x_1+2x_2-5$.</p>
+                        <p class="mt-sm">Classer $A=(1,3)$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>On remplace $x_1$ par 1 et $x_2$ par 3.</li>
+                            <li>$f(A)=1+2\times 3-5$.</li>
+                            <li>$2\times 3=6$, donc $f(A)=1+6-5$.</li>
+                            <li>$1+6-5=2$.</li>
+                            <li>$2$ est positif, donc $A$ est classé $+1$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box green mt">
+                    Phrase finale: comme $f(A)>0$, le SVM affecte $A$ à la classe positive.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple corrigé 2</span>
+                    <h2>Classer quand le score est négatif</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">On garde $f(x)=x_1+2x_2-5$.</p>
+                        <p class="mt-sm">Classer $B=(1,1)$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>On remplace $x_1$ par 1 et $x_2$ par 1.</li>
+                            <li>$f(B)=1+2\times 1-5$.</li>
+                            <li>$2\times 1=2$, donc $f(B)=1+2-5$.</li>
+                            <li>$1+2-5=-2$.</li>
+                            <li>$-2$ est négatif, donc $B$ est classé $-1$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Ne dis pas "la valeur est petite donc classe -1". La vraie raison est: le signe est négatif.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple corrigé 3</span>
+                    <h2>Que faire si le score vaut zéro?</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">On garde $f(x)=x_1+2x_2-5$.</p>
+                        <p class="mt-sm">Classer $C=(3,1)$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>$f(C)=3+2\times 1-5$.</li>
+                            <li>$2\times 1=2$, donc $f(C)=3+2-5$.</li>
+                            <li>$3+2-5=0$.</li>
+                            <li>Le point est exactement sur l'hyperplan.</li>
+                            <li>En devoir, on écrit: point limite, pas de signe strict.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box blue mt">
+                    Dans les sujets classiques, le point test tombe rarement exactement sur zéro. Mais si ça arrive, il faut le signaler proprement.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Recette 2</span>
+                    <h2>Quand les $\alpha_i$ sont donnes: calculer $w$</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <div class="formula">
+                            $$w=\sum_i \alpha_i y_i x_i$$
+                        </div>
+                        <div class="step mt">
+                            <span class="num">1</span>
+                            <p>Pour chaque ligne, calculer $\alpha_i y_i x_i$.</p>
+                        </div>
+                        <div class="step">
+                            <span class="num green">2</span>
+                            <p>Faire la somme composante par composante.</p>
+                        </div>
+                        <div class="step">
+                            <span class="num orange">3</span>
+                            <p>Ecrire $w_1x_1+w_2x_2+b=0$.</p>
+                        </div>
+                    </div>
+                    <div class="box red">
+                        <strong>Erreur classique:</strong> oublier le signe de $y_i$. Un point de classe $-1$ inverse
+                        la direction de sa contribution. C'est le piege le plus couteux dans le sujet 2023.
+                    </div>
+                </div>
+                <table class="mt">
+                    <thead>
+                        <tr><th>Ce qui est donne</th><th>Ce qu'on fait</th><th>Ce qu'on conclut</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>$\alpha_i$, $y_i$, $x_i$, $b$</td>
+                            <td>On calcule $w=\sum \alpha_i y_i x_i$</td>
+                            <td>Hyperplan $w^Tx+b=0$</td>
+                        </tr>
+                        <tr>
+                            <td>Un nouveau point $x$</td>
+                            <td>On calcule $w^Tx+b$</td>
+                            <td>Signe positif: $+1$, signe negatif: $-1$</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Comprendre les alpha</span>
+                    <h2>$\alpha_i y_i x_i$: une contribution signée</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>$x_i$</h3>
+                        <p class="mt-sm">C'est le point sous forme de coordonnées, par exemple $(3,0)$.</p>
+                    </div>
+                    <div class="card">
+                        <h3>$y_i$</h3>
+                        <p class="mt-sm">C'est la classe: $+1$ ou $-1$. Elle peut inverser le signe de la contribution.</p>
+                    </div>
+                    <div class="card">
+                        <h3>$\alpha_i$</h3>
+                        <p class="mt-sm">C'est le poids du point dans la solution. Si $\alpha_i=0$, le point ne contribue pas à $w$.</p>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    Image simple: chaque point pousse le vecteur $w$. Les points positifs poussent dans leur direction;
+                    les points négatifs poussent dans la direction opposée.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Exemple alpha</span>
+                    <h2>Une seule contribution, pas à pas</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">Soit $x_1=(-3,1)$, $y_1=-1$, $\alpha_1=\frac{1}{9}$.</p>
+                        <p class="mt-sm">Calculer $\alpha_1y_1x_1$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>On commence par $y_1x_1$.</li>
+                            <li>$y_1=-1$, donc on multiplie $(-3,1)$ par $-1$.</li>
+                            <li>$-1\times(-3,1)=(3,-1)$.</li>
+                            <li>Ensuite on multiplie par $\alpha_1=\frac{1}{9}$.</li>
+                            <li>$\frac{1}{9}(3,-1)=(\frac{1}{3},-\frac{1}{9})$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Le piège est ici: deux signes négatifs donnent un positif sur la première coordonnée.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Exemple alpha</span>
+                    <h2>Faire une somme de contributions</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé simplifié</h3>
+                        <p class="mt-sm">$x_1=(2,0)$, $y_1=+1$, $\alpha_1=\frac{1}{2}$.</p>
+                        <p>$x_2=(0,2)$, $y_2=-1$, $\alpha_2=\frac{1}{2}$.</p>
+                        <p class="mt-sm">Calculer $w$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>Contribution 1: $\frac{1}{2}(+1)(2,0)=(1,0)$.</li>
+                            <li>Contribution 2: $\frac{1}{2}(-1)(0,2)=(0,-1)$.</li>
+                            <li>On additionne coordonnée par coordonnée.</li>
+                            <li>Première coordonnée: $1+0=1$.</li>
+                            <li>Deuxième coordonnée: $0+(-1)=-1$.</li>
+                            <li>Donc $w=(1,-1)$.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Anti-erreur</span>
+                    <h2>Checklist avant de calculer $w$</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="box green">
+                        <h3>Avant la somme</h3>
+                        <ul class="slow-list">
+                            <li>Chaque point a-t-il bien une classe $+1$ ou $-1$?</li>
+                            <li>Ai-je recopié les $\alpha_i$ sans erreur?</li>
+                            <li>Ai-je mis les points sous forme de couples $(x_1,x_2)$?</li>
+                        </ul>
+                    </div>
+                    <div class="box red">
+                        <h3>Pendant la somme</h3>
+                        <ul class="slow-list">
+                            <li>Je multiplie toujours par $y_i$.</li>
+                            <li>Je calcule une ligne à la fois.</li>
+                            <li>J'additionne séparément les premières et deuxièmes coordonnées.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    Si tu fais cette checklist, tu évites 80% des erreurs dans le sujet 2023.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Sujet 2023</span>
+                    <h2>Exercice complet: calcul de $w$ et classification</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <table>
+                            <thead>
+                                <tr><th>Point</th><th>$x_1$</th><th>$x_2$</th><th>$y$</th><th>$\alpha$</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>X1</td><td>-3</td><td>1</td><td>-1</td><td>1/9</td></tr>
+                                <tr><td>X2</td><td>3</td><td>0</td><td>+1</td><td>1/3</td></tr>
+                                <tr><td>X3</td><td>1</td><td>-3</td><td>-1</td><td>1/3</td></tr>
+                                <tr><td>X4</td><td>0</td><td>3</td><td>+1</td><td>1/27</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="formula small mt">$$b=-\frac{1}{2}$$</div>
+                    </div>
+                    <div class="exercise">
+                        <h3>A faire</h3>
+                        <p class="mt-sm">1. Calculer $w$.</p>
+                        <p>2. Donner l'hyperplan.</p>
+                        <p>3. Classer $X_5=(2,0)$.</p>
+                        <details open>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                On calcule d'abord toutes les contributions $\alpha_i y_i x_i$, puis on les additionne.
+                                La somme donne $w=(1,1)$. Comme $b=-\frac{1}{2}$, l'hyperplan est
+                                $x_1+x_2-\frac{1}{2}=0$. Pour $X_5=(2,0)$, on remplace:
+                                $f(2,0)=2+0-\frac{1}{2}=1.5$. Le score est positif, donc $X_5$ est classé $+1$.
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">2023 détaillé</span>
+                    <h2>Calcul de $w$: première moitié</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>Contribution de X1</h3>
+                        <p>$X_1=(-3,1)$, $y_1=-1$, $\alpha_1=\frac{1}{9}$.</p>
+                        <ul class="slow-list">
+                            <li>$y_1X_1=(-1)(-3,1)=(3,-1)$.</li>
+                            <li>$\alpha_1y_1X_1=\frac{1}{9}(3,-1)$.</li>
+                            <li>Résultat: $(\frac{1}{3},-\frac{1}{9})$.</li>
+                        </ul>
+                    </div>
+                    <div class="worked">
+                        <h3>Contribution de X2</h3>
+                        <p>$X_2=(3,0)$, $y_2=+1$, $\alpha_2=\frac{1}{3}$.</p>
+                        <ul class="slow-list">
+                            <li>$y_2X_2=(+1)(3,0)=(3,0)$.</li>
+                            <li>$\alpha_2y_2X_2=\frac{1}{3}(3,0)$.</li>
+                            <li>Résultat: $(1,0)$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box blue mt">
+                    On ne somme pas encore tout. On prépare proprement chaque ligne pour éviter les erreurs de signe.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">2023 détaillé</span>
+                    <h2>Calcul de $w$: deuxième moitié</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>Contribution de X3</h3>
+                        <p>$X_3=(1,-3)$, $y_3=-1$, $\alpha_3=\frac{1}{3}$.</p>
+                        <ul class="slow-list">
+                            <li>$y_3X_3=(-1)(1,-3)=(-1,3)$.</li>
+                            <li>$\alpha_3y_3X_3=\frac{1}{3}(-1,3)$.</li>
+                            <li>Résultat: $(-\frac{1}{3},1)$.</li>
+                        </ul>
+                    </div>
+                    <div class="worked">
+                        <h3>Contribution de X4</h3>
+                        <p>$X_4=(0,3)$, $y_4=+1$, $\alpha_4=\frac{1}{27}$.</p>
+                        <ul class="slow-list">
+                            <li>$y_4X_4=(+1)(0,3)=(0,3)$.</li>
+                            <li>$\alpha_4y_4X_4=\frac{1}{27}(0,3)$.</li>
+                            <li>Résultat: $(0,\frac{1}{9})$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Attention à X3: $-1\times -3=+3$. C'est une source fréquente d'erreur.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">2023 détaillé</span>
+                    <h2>Sommer les contributions sans se tromper</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>Première coordonnée</h3>
+                        <p>On additionne seulement les premières coordonnées:</p>
+                        <p class="mt-sm">$\frac{1}{3}+1-\frac{1}{3}+0=1$.</p>
+                        <p class="mt-sm">Donc $w_1=1$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Deuxième coordonnée</h3>
+                        <p>On additionne seulement les deuxièmes coordonnées:</p>
+                        <p class="mt-sm">$-\frac{1}{9}+0+1+\frac{1}{9}=1$.</p>
+                        <p class="mt-sm">Donc $w_2=1$.</p>
+                    </div>
+                </div>
+                <div class="formula mt">$$w=(w_1,w_2)=(1,1)$$</div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">2023 détaillé</span>
+                    <h2>De $w$ à la classe du point test</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>Hyperplan</h3>
+                        <ul class="slow-list">
+                            <li>On a $w=(1,1)$.</li>
+                            <li>Le sujet donne $b=-\frac{1}{2}$.</li>
+                            <li>Donc $w^Tx+b=0$ devient $x_1+x_2-\frac{1}{2}=0$.</li>
+                        </ul>
+                    </div>
+                    <div class="worked">
+                        <h3>Classification de $X_5=(2,0)$</h3>
+                        <ul class="slow-list">
+                            <li>$f(X_5)=2+0-\frac{1}{2}$.</li>
+                            <li>$f(X_5)=1.5$.</li>
+                            <li>$1.5>0$, donc classe $+1$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box green mt">
+                    Phrase complète: le score SVM est positif, donc le nouveau point se trouve du côté positif de l'hyperplan.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Sujet 2021</span>
+                    <h2>Exercice complet: retrouver l'hyperplan simple</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <table>
+                            <thead>
+                                <tr><th>Point</th><th>Att1</th><th>Att2</th><th>Y</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>X1</td><td>4</td><td>3</td><td>+1</td></tr>
+                                <tr><td>X2</td><td>0</td><td>2</td><td>+1</td></tr>
+                                <tr><td>X3</td><td>0</td><td>0</td><td>-1</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="box blue mt">
+                            Intuition: un point positif est a $y=2$, le negatif est a $y=0$.
+                            La frontiere au milieu est $y=1$.
+                        </div>
+                    </div>
+                    <div>
+                        <svg class="diagram" viewBox="0 0 620 360" role="img" aria-label="Exercice SVM 2021">
+                            <rect width="620" height="360" fill="#ffffff" />
+                            <g stroke="#dbe4f0" stroke-width="1">
+                                <path d="M70 40 H570" />
+                                <path d="M70 100 H570" />
+                                <path d="M70 160 H570" />
+                                <path d="M70 220 H570" />
+                                <path d="M70 280 H570" />
+                                <path d="M120 25 V315" />
+                                <path d="M220 25 V315" />
+                                <path d="M320 25 V315" />
+                                <path d="M420 25 V315" />
+                                <path d="M520 25 V315" />
+                            </g>
+                            <path d="M70 190 H570" stroke="#1e40af" stroke-width="5" />
+                            <path d="M70 130 H570" stroke="#7c3aed" stroke-width="3" stroke-dasharray="10 8" />
+                            <path d="M70 250 H570" stroke="#7c3aed" stroke-width="3" stroke-dasharray="10 8" />
+                            <circle cx="120" cy="130" r="13" fill="#059669" stroke="#064e3b" stroke-width="2" />
+                            <circle cx="520" cy="70" r="13" fill="#059669" stroke="#064e3b" stroke-width="2" />
+                            <rect x="107" y="237" width="26" height="26" rx="4" fill="#dc2626" stroke="#7f1d1d" stroke-width="2" />
+                            <text x="138" y="126" font-size="16" font-weight="800" fill="#059669">X2</text>
+                            <text x="535" y="70" font-size="16" font-weight="800" fill="#059669">X1</text>
+                            <text x="136" y="257" font-size="16" font-weight="800" fill="#dc2626">X3</text>
+                            <text x="390" y="182" font-size="20" font-weight="800" fill="#1e40af">x2 - 1 = 0</text>
+                        </svg>
+                    </div>
+                </div>
+                <div class="answer mt">
+                    Hyperplan: $x_2-1=0$, donc $w=(0,1)$ et $b=-1$.
+                    Les marges sont $x_2=2$ et $x_2=0$. On obtient
+                    $\alpha_1=0$, $\alpha_2=\frac{1}{2}$, $\alpha_3=\frac{1}{2}$.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">2021 détaillé</span>
+                    <h2>Pourquoi la frontière est $x_2=1$</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>Observation</h3>
+                        <ul class="slow-list">
+                            <li>Le point négatif X3 est à hauteur $x_2=0$.</li>
+                            <li>Le point positif X2 est à hauteur $x_2=2$.</li>
+                            <li>Le milieu entre 0 et 2 est 1.</li>
+                        </ul>
+                    </div>
+                    <div class="worked">
+                        <h3>Conclusion</h3>
+                        <ul class="slow-list">
+                            <li>La frontière passe au milieu: $x_2=1$.</li>
+                            <li>On écrit sous forme SVM: $x_2-1=0$.</li>
+                            <li>Donc $w=(0,1)$ et $b=-1$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    On n'a pas besoin d'une longue optimisation ici: la géométrie suffit parce que les points sont très simples.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">2021 détaillé</span>
+                    <h2>Vérifier que l'hyperplan classe correctement</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="worked">
+                        <h3>X1 = (4,3)</h3>
+                        <p>$f(X1)=3-1=2$.</p>
+                        <p class="mt-sm">$2>0$, donc classe $+1$. Correct.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>X2 = (0,2)</h3>
+                        <p>$f(X2)=2-1=1$.</p>
+                        <p class="mt-sm">$1>0$, donc classe $+1$. Correct.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>X3 = (0,0)</h3>
+                        <p>$f(X3)=0-1=-1$.</p>
+                        <p class="mt-sm">$-1<0$, donc classe $-1$. Correct.</p>
+                    </div>
+                </div>
+                <div class="box green mt">
+                    X2 et X3 donnent exactement $+1$ et $-1$: ils sont sur les marges, donc vecteurs supports.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">2021 détaillé</span>
+                    <h2>Retrouver les $\alpha_i$ sans magie</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="worked">
+                        <h3>On sait déjà</h3>
+                        <p>$w=(0,1)$ et $w=\alpha_1y_1X_1+\alpha_2y_2X_2+\alpha_3y_3X_3$.</p>
+                        <p class="mt-sm">X1 est loin de la marge, donc on prend $\alpha_1=0$.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Il reste X2 et X3</h3>
+                        <p>$X2=(0,2), y=+1$ donne $\alpha_2(0,2)$.</p>
+                        <p>$X3=(0,0), y=-1$ donne $\alpha_3(0,0)=(0,0)$, donc il ne change pas $w$.</p>
+                        <p class="mt-sm">Pour obtenir $w=(0,1)$, il faut $2\alpha_2=1$, donc $\alpha_2=\frac{1}{2}$.</p>
+                        <p class="mt-sm">La contrainte duale $\sum_i \alpha_i y_i=0$ impose ensuite
+                            $\alpha_1+\alpha_2-\alpha_3=0$. Avec $\alpha_1=0$, on obtient $\alpha_3=\alpha_2=\frac{1}{2}$.</p>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    Dans cette version simplifiée, on retient le résultat attendu: $\alpha_1=0$, $\alpha_2=\frac{1}{2}$,
+                    $\alpha_3=\frac{1}{2}$. Le plus important pour l'examen reste de comprendre que les vecteurs supports portent les $\alpha$ non nuls.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Contraintes</span>
+                    <h2>Exprimer les contraintes de separabilite</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <div class="formula">
+                            $$y_i(w^Tx_i+b)\geq 1$$
+                        </div>
+                        <div class="box blue mt">
+                            Pour un point positif: $w^Tx_i+b\geq 1$.
+                            Pour un point negatif: $w^Tx_i+b\leq -1$.
+                        </div>
+                    </div>
+                    <div class="exercise">
+                        <h3>Exercice 2 - contraintes 2021</h3>
+                        <p class="mt-sm">Avec $X_1=(4,3), y=+1$, $X_2=(0,2), y=+1$, $X_3=(0,0), y=-1$,
+                            ecrire les contraintes.</p>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                X1 est positif, donc $w^TX_1+b\geq 1$, soit $4w_1+3w_2+b\geq 1$.
+                                X2 est positif, donc $w^TX_2+b\geq 1$, soit $2w_2+b\geq 1$.
+                                X3 est négatif, donc $w^TX_3+b\leq -1$. Comme X3 vaut $(0,0)$,
+                                on obtient simplement $b\leq -1$.
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <div class="box orange mt">
+                    Si le sujet demande "exprimer les contraintes", il ne demande pas encore de resoudre.
+                    Ecrire correctement ces inegalites rapporte deja des points.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Contraintes lentes</span>
+                    <h2>La formule $y_i(w^Tx_i+b)\geq 1$ expliquée</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Si $y_i=+1$</h3>
+                        <p class="mt-sm">La formule devient $w^Tx_i+b\geq 1$.</p>
+                        <p class="mt-sm">Le point positif doit être du côté positif, au moins sur la marge positive.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Si $y_i=-1$</h3>
+                        <p class="mt-sm">La formule devient $-(w^Tx_i+b)\geq 1$.</p>
+                        <p class="mt-sm">Donc $w^Tx_i+b\leq -1$. Le point négatif doit être du côté négatif.</p>
+                    </div>
+                </div>
+                <div class="teacher-note mt">
+                    La formule semble abstraite, mais elle dit seulement: les positifs d'un côté, les négatifs de l'autre, avec une marge.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple contraintes</span>
+                    <h2>Un point positif, une contrainte</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">Point $A=(2,3)$, classe $y=+1$.</p>
+                        <p class="mt-sm">Ecrire sa contrainte de séparabilité.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>On part de $y(w^Tx+b)\geq 1$.</li>
+                            <li>Ici $y=+1$, donc on garde $w^Tx+b\geq 1$.</li>
+                            <li>$w^Tx=w_1x_1+w_2x_2$.</li>
+                            <li>Avec $A=(2,3)$, cela donne $2w_1+3w_2+b\geq 1$.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple contraintes</span>
+                    <h2>Un point négatif, une contrainte</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enoncé</h3>
+                        <p class="mt-sm">Point $B=(1,4)$, classe $y=-1$.</p>
+                        <p class="mt-sm">Ecrire sa contrainte de séparabilité.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction ultra détaillée</h3>
+                        <ul class="slow-list">
+                            <li>On part de $y(w^Tx+b)\geq 1$.</li>
+                            <li>Ici $y=-1$, donc $-(w^Tx+b)\geq 1$.</li>
+                            <li>Cela équivaut à $w^Tx+b\leq -1$.</li>
+                            <li>Avec $B=(1,4)$, on obtient $w_1+4w_2+b\leq -1$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Erreur fréquente: écrire $\geq 1$ aussi pour le point négatif. Pour un négatif, on finit avec $\leq -1$.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Primal vs dual</span>
+                    <h2>Ce qu'il faut dire sans demonstration</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Probleme primal</h3>
+                        <p class="mt-sm">On cherche directement $w$ et $b$ pour maximiser la marge tout en respectant les contraintes.</p>
+                        <div class="formula small mt">
+                            $$\min \frac{1}{2}\|w\|^2$$
+                            $$y_i(w^Tx_i+b)\geq 1$$
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Probleme dual</h3>
+                        <p class="mt-sm">On travaille avec les $\alpha_i$ et les produits scalaires entre exemples.</p>
+                        <div class="formula small mt">
+                            $$w=\sum_i \alpha_i y_i x_i$$
+                        </div>
+                        <p class="muted mt-sm">C'est cette forme qui permet les noyaux.</p>
+                    </div>
+                </div>
+                <div class="box green mt">
+                    <strong>Reponse QCM attendue:</strong> l'avantage le plus fort du dual est de permettre le cas
+                    non lineaire via le kernel trick, car on remplace les produits scalaires par $K(x_i,x_j)$.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Primal</span>
+                    <h2>Le primal en mots très simples</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="teacher-note">
+                        <h3>Ce qu'il cherche</h3>
+                        <p class="mt-sm">Le primal cherche directement la frontière: donc il cherche $w$ et $b$.</p>
+                        <p class="mt-sm">C'est comme chercher directement l'équation de la droite qui sépare les deux groupes.</p>
+                    </div>
+                    <div class="box blue">
+                        <h3>Ce qu'il optimise</h3>
+                        <ul class="slow-list">
+                            <li>Petite norme de $w$ signifie grande marge.</li>
+                            <li>Les contraintes empêchent les points de passer du mauvais côté.</li>
+                            <li>Donc primal = frontière + marge + contraintes.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="worked mt">
+                    Réponse courte si le prof demande l'origine de l'équation primale: elle vient de la recherche d'un hyperplan séparateur à marge maximale.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Dual</span>
+                    <h2>Le dual en mots très simples</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="teacher-note">
+                        <h3>Changement de point de vue</h3>
+                        <p class="mt-sm">Au lieu de chercher directement $w$, le dual cherche combien chaque point compte dans la solution.</p>
+                        <p class="mt-sm">Ces poids sont les $\alpha_i$.</p>
+                    </div>
+                    <div class="box green">
+                        <h3>Pourquoi c'est utile?</h3>
+                        <ul class="slow-list">
+                            <li>Les points importants ont $\alpha_i>0$.</li>
+                            <li>Les points non importants ont souvent $\alpha_i=0$.</li>
+                            <li>On récupère ensuite $w$ avec $w=\sum\alpha_i y_i x_i$.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Ne pas confondre: $\alpha_i$ n'est pas une coordonnée du point. C'est le poids du point dans le modèle.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">QCM dual</span>
+                    <h2>Pourquoi le dual aide pour le non-linéaire?</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Question typique</h3>
+                        <p class="mt-sm">Quelle est l'avantage de la formulation duale pour le classifieur SVM?</p>
+                        <p class="mt-sm">Réponse attendue dans les sujets: elle permet de gérer le cas non linéaire.</p>
+                    </div>
+                    <div class="worked">
+                        <h3>Correction expliquée</h3>
+                        <ul class="slow-list">
+                            <li>Dans le dual, les données apparaissent via des produits scalaires $x_i^Tx_j$.</li>
+                            <li>On peut remplacer ce produit scalaire par une fonction noyau $K(x_i,x_j)$.</li>
+                            <li>Ce remplacement donne une séparation non linéaire sans calculer explicitement le nouvel espace.</li>
+                            <li>C'est le <strong>kernel trick</strong>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Noyaux</span>
+                    <h2>Kernel trick: juste assez pour le devoir</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>Noyau lineaire</h3>
+                        <div class="formula small mt-sm">$$K(x,z)=x^Tz$$</div>
+                        <p class="muted mt-sm">Frontiere lineaire dans l'espace d'origine.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Noyau polynomial</h3>
+                        <div class="formula small mt-sm">$$K(x,z)=(\gamma x^Tz+r)^d$$</div>
+                        <p class="muted mt-sm">Frontieres courbes de complexite controlee par le degre.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Noyau RBF</h3>
+                        <div class="formula small mt-sm">$$K(x,z)=e^{-\gamma\|x-z\|^2}$$</div>
+                        <p class="muted mt-sm">Tres flexible; $\gamma$ controle l'influence locale.</p>
+                    </div>
+                </div>
+                <div class="box orange mt">
+                    A ne pas sur-apprendre: on ne te demandera probablement pas de choisir un noyau optimal.
+                    Savoir que le dual rend possible la classification non lineaire suffit souvent.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Noyau intuitif</span>
+                    <h2>Quand une droite ne suffit pas</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="teacher-note">
+                        <h3>Image simple</h3>
+                        <p class="mt-sm">Imagine des points positifs au centre et des points négatifs autour. Une droite ne peut pas séparer proprement le centre du cercle extérieur.</p>
+                        <p class="mt-sm">Un noyau permet au SVM de créer une frontière courbe, par exemple un cercle.</p>
+                    </div>
+                    <div class="box blue">
+                        <h3>Traduction devoir</h3>
+                        <ul class="slow-list">
+                            <li>SVM linéaire: frontière droite.</li>
+                            <li>SVM avec noyau: frontière courbe possible.</li>
+                            <li>Dual + noyau = non-linéaire sans calcul compliqué.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="worked mt">
+                    Si le QCM dit "le dual permet de gérer le cas non linéaire", on coche cette idée à cause des noyaux.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Choix noyau</span>
+                    <h2>Ce qu'il faut retenir sans apprendre tous les noyaux</h2>
+                </div>
+                <table>
+                    <thead><tr><th>Noyau</th><th>Image mentale</th><th>Phrase de copie</th></tr></thead>
+                    <tbody>
+                        <tr><td>Linéaire</td><td>Une droite / un plan</td><td>Adapté si les classes sont séparables linéairement.</td></tr>
+                        <tr><td>Polynomial</td><td>Courbe contrôlée par un degré</td><td>Permet des frontières non linéaires de complexité modérée.</td></tr>
+                        <tr><td>RBF</td><td>Zones d'influence autour des points</td><td>Très flexible, utile quand la séparation est fortement non linéaire.</td></tr>
+                    </tbody>
+                </table>
+                <div class="mistake mt">
+                    Pour ce devoir, ne perds pas du temps à mémoriser dix noyaux. Mémorise surtout: noyau = produit scalaire remplacé = frontière non linéaire possible.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Soft margin</span>
+                    <h2>Hard margin, soft margin et parametre $C$</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>Hard margin</h3>
+                        <p class="mt-sm">Cas separable. Aucune erreur toleree. Les points doivent rester du bon cote de la marge.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Soft margin</h3>
+                        <p class="mt-sm">Cas non parfaitement separable. On accepte des violations avec des variables de relachement.</p>
+                    </div>
+                    <div class="card">
+                        <h3>$C$</h3>
+                        <p class="mt-sm">Grand $C$: erreurs tres penalisees. Petit $C$: plus de regularisation, frontiere plus simple.</p>
+                    </div>
+                </div>
+                <div class="exercise mt">
+                    <h3>Exercice 3 - QCM rapide</h3>
+                    <p class="mt-sm">Si les donnees contiennent du bruit et ne sont pas parfaitement separables, quel SVM utiliser?</p>
+                    <details>
+                        <summary>Correction détaillée</summary>
+                        <div class="answer mt-sm">
+                            Il faut utiliser un soft margin SVM. La raison est que les données bruitées peuvent contenir
+                            des points difficiles ou impossibles à séparer parfaitement. Le hard margin refuserait toute
+                            erreur et risquerait de produire une frontière trop fragile. Le soft margin accepte quelques
+                            violations de marge grâce aux variables de relâchement, puis le paramètre $C$ règle le coût
+                            de ces violations.
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Soft margin lent</span>
+                    <h2>Pourquoi accepter parfois une erreur?</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="teacher-note">
+                        <h3>Analogie</h3>
+                        <p class="mt-sm">Si un étudiant est assis du mauvais côté par accident, faut-il déplacer toute la séparation pour lui?</p>
+                        <p class="mt-sm">Pas forcément. Sinon la frontière devient mauvaise pour tous les autres.</p>
+                    </div>
+                    <div class="box green">
+                        <h3>Traduction SVM</h3>
+                        <ul class="slow-list">
+                            <li>Hard margin: aucune exception.</li>
+                            <li>Soft margin: quelques exceptions possibles.</li>
+                            <li>Le paramètre $C$ dit à quel point ces exceptions coûtent cher.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="worked mt">
+                    Si les données sont bruitées, la réponse intelligente est soft margin, pas hard margin.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Exemple C</span>
+                    <h2>Grand $C$ ou petit $C$: que dire en QCM?</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Grand $C$</h3>
+                        <p class="mt-sm">Les erreurs coûtent très cher. Le modèle essaie fortement de bien classer l'entraînement.</p>
+                        <p class="mt-sm">Risque: frontière trop stricte si les données contiennent du bruit.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Petit $C$</h3>
+                        <p class="mt-sm">Les erreurs coûtent moins cher. Le modèle accepte plus facilement des violations.</p>
+                        <p class="mt-sm">Effet: plus de régularisation, frontière souvent plus simple.</p>
+                    </div>
+                </div>
+                <div class="mistake mt">
+                    Ne dis pas seulement "grand C = mieux". Grand $C$ peut sur-apprendre si on force trop le modèle.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Exercices incrementaux</span>
+                    <h2>Serie courte pour monter en douceur</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Exercice 4 - lire une marge</h3>
+                        <p class="mt-sm">Soit $w=(0,2)$ et $b=-4$.</p>
+                        <p>1. Donner l'hyperplan. 2. Donner les deux marges.</p>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                On écrit d'abord l'hyperplan: $w^Tx+b=0$. Ici $w=(0,2)$ et $b=-4$,
+                                donc $2x_2-4=0$. On résout: $2x_2=4$, donc $x_2=2$.
+                                Pour les marges, on remplace 0 par $+1$ puis par $-1$:
+                                $2x_2-4=1$ donne $x_2=2.5$, et $2x_2-4=-1$ donne $x_2=1.5$.
+                            </div>
+                        </details>
+                    </div>
+                    <div class="exercise">
+                        <h3>Exercice 5 - calculer $w$</h3>
+                        <p class="mt-sm">$X_1=(1,0), y_1=+1, \alpha_1=2$</p>
+                        <p>$X_2=(0,1), y_2=-1, \alpha_2=3$</p>
+                        <p>Calculer $w$.</p>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                On calcule une contribution par point. Pour X1:
+                                $2\times(+1)\times(1,0)=(2,0)$. Pour X2:
+                                $3\times(-1)\times(0,1)=(0,-3)$. On additionne ensuite:
+                                $(2,0)+(0,-3)=(2,-3)$. Donc $w=(2,-3)$.
+                            </div>
+                        </details>
+                    </div>
+                    <div class="exercise">
+                        <h3>Exercice 6 - classer</h3>
+                        <p class="mt-sm">Avec $w=(2,-3)$ et $b=1$, classer $A=(1,1)$.</p>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                On utilise $f(x)=w^Tx+b$. Avec $w=(2,-3)$, $b=1$ et $A=(1,1)$:
+                                $f(A)=2\times1+(-3)\times1+1=2-3+1=0$. Le score vaut exactement zéro,
+                                donc A est sur la frontière. En devoir, on dit: point limite, pas de classe
+                                stricte par le signe.
+                            </div>
+                        </details>
+                    </div>
+                    <div class="exercise">
+                        <h3>Exercice 7 - vecteur support</h3>
+                        <p class="mt-sm">Pour $f(x)=x_1+x_2-1$, le point $(1,1)$ de classe $+1$ est-il sur la marge?</p>
+                        <details>
+                            <summary>Correction détaillée</summary>
+                            <div class="answer mt-sm">
+                                On calcule $f(1,1)=1+1-1=1$. Le point est de classe $+1$, donc
+                                $y f(x)=+1\times1=1$. La condition de marge est exactement atteinte:
+                                le point est sur la marge positive. Il peut donc être un vecteur support.
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge purple">Mini-devoir</span>
+                    <h2>Probleme type 4 a 5 points</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="exercise">
+                        <h3>Enonce</h3>
+                        <table class="mt-sm">
+                            <thead>
+                                <tr><th>Point</th><th>$x_1$</th><th>$x_2$</th><th>$y$</th><th>$\alpha$</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>A</td><td>2</td><td>0</td><td>+1</td><td>1/2</td></tr>
+                                <tr><td>B</td><td>0</td><td>2</td><td>+1</td><td>1/2</td></tr>
+                                <tr><td>C</td><td>0</td><td>0</td><td>-1</td><td>1</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="mt-sm">On donne $b=-1$. Calculer $w$, l'hyperplan, puis classer $D=(1,2)$.</p>
+                    </div>
+                    <div class="answer">
+                        <h3>Corrige</h3>
+                        <p class="mt-sm">Calcul:</p>
+                        <p class="mono">w = 1/2(+1)(2,0) + 1/2(+1)(0,2) + 1(-1)(0,0)</p>
+                        <p class="mt-sm">Donc $w=(1,1)$.</p>
+                        <p>Hyperplan: $x_1+x_2-1=0$.</p>
+                        <p>Pour $D=(1,2)$: $f(D)=1+2-1=2>0$.</p>
+                        <p><strong>Conclusion:</strong> $D$ est classe $+1$.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge orange">Pieges QCM</span>
+                    <h2>Les reponses qui rapportent vite</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr><th>Question probable</th><th>Reponse courte</th><th>Mot cle</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SVM est quel type de classifieur?</td>
+                            <td>Classifieur a marge maximale</td>
+                            <td>Maximum margin</td>
+                        </tr>
+                        <tr>
+                            <td>Pourquoi passer au dual?</td>
+                            <td>Pour utiliser les produits scalaires et les noyaux</td>
+                            <td>Kernel trick</td>
+                        </tr>
+                        <tr>
+                            <td>Que sont les vecteurs supports?</td>
+                            <td>Les points qui definissent la marge/frontiere</td>
+                            <td>$\alpha_i>0$</td>
+                        </tr>
+                        <tr>
+                            <td>Hard margin?</td>
+                            <td>Aucune erreur toleree, donnees separables</td>
+                            <td>Separable</td>
+                        </tr>
+                        <tr>
+                            <td>Soft margin?</td>
+                            <td>Erreurs ou violations possibles</td>
+                            <td>$C$, relachement</td>
+                        </tr>
+                        <tr>
+                            <td>Grand $C$?</td>
+                            <td>Penalise fort les erreurs, modele plus strict</td>
+                            <td>Moins de regularisation</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge green">Methode copie</span>
+                    <h2>Template de reponse pour gagner les points</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="box blue">
+                        <h3>Quand on donne les $\alpha_i$</h3>
+                        <div class="step"><span class="num">1</span><p>J'utilise $w=\sum_i\alpha_i y_i x_i$.</p></div>
+                        <div class="step"><span class="num green">2</span><p>Je calcule chaque contribution.</p></div>
+                        <div class="step"><span class="num orange">3</span><p>J'ecris l'hyperplan $w^Tx+b=0$.</p></div>
+                        <div class="step"><span class="num purple">4</span><p>Je classe le nouveau point par le signe.</p></div>
+                    </div>
+                    <div class="box green">
+                        <h3>Phrase finale</h3>
+                        <p class="mt-sm">
+                            La fonction de decision du SVM est $f(x)=w^Tx+b$. Pour le point teste,
+                            $f(x)$ est positif, donc le point appartient a la classe $+1$.
+                        </p>
+                        <p class="mt-sm">
+                            Si le score etait negatif, la classe predite serait $-1$.
+                        </p>
+                    </div>
+                </div>
+                <div class="box red mt">
+                    Ne laisse jamais une reponse avec seulement des calculs. Termine par une phrase de decision.
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="content">
+                <div class="slide-header">
+                    <span class="badge">Sources</span>
+                    <h2>Ce support utilise seulement les references utiles</h2>
+                </div>
+                <div class="grid-2 source-list">
+                    <div class="card">
+                        <h3>Supports locaux</h3>
+                        <p class="mt-sm">Examens 2021 et 2023: types de questions attendues.</p>
+                        <p class="mt-sm">Cours Partie II, chapitre SVM: hyperplan, marge, dual, noyaux, soft margin.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Verification externe</h3>
+                        <p class="mt-sm"><a href="https://scikit-learn.org/stable/modules/svm.html">scikit-learn: Support Vector Machines</a></p>
+                        <p class="mt-sm"><a href="https://link.springer.com/article/10.1007/BF00994018">Cortes & Vapnik, Support-vector networks, 1995</a></p>
+                        <p class="mt-sm"><a href="https://www.microsoft.com/en-us/research/publication/a-tutorial-on-support-vector-machines-for-pattern-recognition/">Burges, A Tutorial on SVMs, 1998</a></p>
+                    </div>
+                </div>
+                <div class="box orange mt">
+                    Pour le devoir, ne pas lire ces references en entier. Elles servent seulement a confirmer les
+                    notions: marge maximale, vecteurs supports, dual, kernel trick et parametre $C$.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav>
+        <button class="nav-btn" onclick="prevSlide()" aria-label="Precedent">&#8592;</button>
+        <span class="counter"><span id="current-slide">1</span> / <span id="total-slides">1</span></span>
+        <button class="nav-btn" onclick="nextSlide()" aria-label="Suivant">&#8594;</button>
+        <button class="nav-btn" onclick="window.print()" aria-label="Imprimer">PDF</button>
+    </nav>
+    <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+
+    <script>
+        const slides = Array.from(document.querySelectorAll(".slide"));
+        let currentSlide = 0;
+        const current = document.getElementById("current-slide");
+        const total = document.getElementById("total-slides");
+        const progress = document.getElementById("progress-fill");
+        total.textContent = slides.length;
+
+        function autoFitSlide() {
+            const active = slides[currentSlide];
+            const content = active.querySelector(".content, .narrow");
+            if (!content) return;
+            content.style.transform = "";
+            requestAnimationFrame(() => {
+                const availableWidth = Math.max(280, window.innerWidth - 32);
+                const availableHeight = Math.max(320, window.innerHeight - 154);
+                const contentWidth = Math.max(1, content.scrollWidth);
+                const contentHeight = Math.max(1, content.scrollHeight);
+                const scale = Math.min(1, availableWidth / contentWidth, availableHeight / contentHeight);
+                content.style.transform = `scale(${Math.max(0.25, scale).toFixed(3)})`;
+            });
+        }
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle("active", index === currentSlide);
+                slide.classList.toggle("prev", index < currentSlide);
+            });
+            current.textContent = currentSlide + 1;
+            progress.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            setTimeout(autoFitSlide, 80);
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide += 1;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide -= 1;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowRight" || event.key === " ") {
+                event.preventDefault();
+                nextSlide();
+            }
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                prevSlide();
+            }
+            if (event.key === "Home") {
+                currentSlide = 0;
+                updateSlide();
+            }
+            if (event.key === "End") {
+                currentSlide = slides.length - 1;
+                updateSlide();
+            }
+        });
+
+        window.addEventListener("resize", autoFitSlide);
+        document.querySelectorAll("details").forEach((details) => {
+            details.addEventListener("toggle", () => setTimeout(autoFitSlide, 80));
+        });
+        window.addEventListener("beforeprint", () => {
+            document.querySelectorAll(".content, .narrow").forEach((content) => {
+                content.style.transform = "";
+            });
+        });
+
+        updateSlide();
+    </script>
+</body>
+
+</html>

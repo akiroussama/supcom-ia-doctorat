@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classification Non Supervisée — SupCom 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-purple: #7c3aed;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --accent-pink: #ec4899;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border-light: #e2e8f0;
+            --glass-border: rgba(30, 64, 175, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        header {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: rgba(255,255,255,0.98); backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(30,64,175,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+            padding: 0 2.5rem; z-index: 100;
+        }
+        .header-left { justify-self: start; display: flex; align-items: center; }
+        .institution-logo { height: 45px; width: auto; object-fit: contain; }
+        .header-center { justify-self: center; text-align: center; }
+        .logo { font-family: 'Outfit'; font-weight: 700; font-size: 1.1rem; color: var(--text-main); }
+        .logo-sub { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-muted); letter-spacing: 0.5px; }
+        .header-right { justify-self: end; display: flex; align-items: center; }
+        .supervisor-badge { display: flex; align-items: center; padding: 0.5rem 1rem; background: rgba(255,255,255,0.5); border: 1px solid rgba(30,64,175,0.1); border-radius: 12px; }
+        .supervisor-info { line-height: 1.3; text-align: right; }
+        .supervisor-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+        .supervisor-name { font-family: 'Outfit'; font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+
+        .slide {
+            position: absolute; top: 60px; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transform: translateX(60px);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            padding: 1.5rem 3rem;
+        }
+        .slide.active { opacity: 1; transform: translateX(0); pointer-events: all; }
+        .slide.prev { opacity: 0; transform: translateX(-60px); }
+
+        .content-single, .content-full {
+            width: 100%; max-width: 1100px;
+            transform-origin: center center;
+            transition: transform 0.3s ease;
+        }
+        .content-full { max-width: 1200px; }
+
+        .slide-header {
+            margin-bottom: 1.2rem; padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--glass-border);
+        }
+        .slide-title {
+            font-family: 'Outfit'; font-weight: 800; font-size: 1.8rem;
+            color: var(--text-main); letter-spacing: -0.02em;
+        }
+
+        .section-badge {
+            display: inline-block; padding: 0.25rem 0.75rem;
+            background: rgba(30, 64, 175, 0.08); color: var(--primary);
+            border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 0.4rem; letter-spacing: 0.5px;
+        }
+        .section-badge.kmeans { background: rgba(16, 185, 129, 0.08); color: var(--accent-green); }
+        .section-badge.cah { background: rgba(124, 58, 237, 0.08); color: var(--accent-purple); }
+        .section-badge.acp { background: rgba(245, 158, 11, 0.08); color: var(--accent-orange); }
+        .section-badge.synth { background: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); }
+
+        .hero-title {
+            font-family: 'Outfit'; font-weight: 900; font-size: 3rem;
+            line-height: 1.1; color: var(--text-main); letter-spacing: -0.03em;
+        }
+        .hero-title .accent {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero-subtitle {
+            font-size: 1.15rem; color: var(--text-muted);
+            max-width: 750px; margin: 1rem auto; line-height: 1.6;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-light);
+            border-radius: 14px; padding: 1.2rem; transition: all 0.2s ease;
+        }
+        .card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+        .card-icon { font-size: 2rem; margin-bottom: 0.6rem; }
+        .card-title {
+            font-family: 'Outfit'; font-weight: 700; font-size: 1.1rem;
+            margin-bottom: 0.4rem;
+        }
+        .card-text { font-size: 0.92rem; color: var(--text-muted); line-height: 1.5; }
+
+        .metric-card {
+            background: var(--bg-card); border: 1px solid var(--border-light);
+            border-radius: 14px; padding: 1rem; text-align: center;
+        }
+        .metric-value {
+            font-family: 'Fira Code'; font-weight: 700; font-size: 1.8rem;
+            color: var(--primary);
+        }
+        .metric-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+        .metric-card.success { border-color: var(--accent-green); }
+        .metric-card.success .metric-value { color: var(--accent-green); }
+        .metric-card.warning { border-color: var(--accent-orange); }
+        .metric-card.warning .metric-value { color: var(--accent-orange); }
+        .metric-card.purple { border-color: var(--accent-purple); }
+        .metric-card.purple .metric-value { color: var(--accent-purple); }
+
+        .info-box, .success-box, .warning-box, .formula-box {
+            padding: 1rem 1.2rem; border-radius: 12px;
+            font-size: 0.92rem; line-height: 1.5;
+        }
+        .info-box { background: rgba(30, 64, 175, 0.05); border-left: 4px solid var(--primary); }
+        .info-box-title {
+            font-family: 'Outfit'; font-weight: 700; font-size: 1rem;
+            color: var(--primary); margin-bottom: 0.4rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .success-box { background: rgba(16, 185, 129, 0.05); border-left: 4px solid var(--accent-green); }
+        .success-box-title {
+            font-family: 'Outfit'; font-weight: 700; font-size: 1rem;
+            color: var(--accent-green); margin-bottom: 0.4rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .warning-box { background: rgba(245, 158, 11, 0.05); border-left: 4px solid var(--accent-orange); }
+        .warning-box-title {
+            font-family: 'Outfit'; font-weight: 700; font-size: 1rem;
+            color: var(--accent-orange); margin-bottom: 0.4rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .formula-box {
+            background: rgba(124, 58, 237, 0.04);
+            border: 2px solid rgba(124, 58, 237, 0.15);
+            border-radius: 12px; padding: 1rem 1.5rem;
+            text-align: center; font-size: 1.1rem;
+        }
+        .formula-box .katex { font-size: 1.3em; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+        th, td { padding: 0.5rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border-light); }
+        th {
+            font-family: 'Outfit'; font-weight: 600; color: var(--text-muted);
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        td.highlight { color: var(--primary); font-weight: 600; }
+        tr.best { background: rgba(16, 185, 129, 0.06); }
+
+        .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
+        .toc-entry {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 0.7rem 1rem; border-radius: 10px;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .toc-entry:hover { background: rgba(30, 64, 175, 0.05); }
+        .toc-num {
+            font-family: 'Fira Code'; font-weight: 700; font-size: 1.3rem;
+            color: var(--primary); min-width: 2rem;
+        }
+        .toc-num.green { color: var(--accent-green); }
+        .toc-num.purple { color: var(--accent-purple); }
+        .toc-num.orange { color: var(--accent-orange); }
+        .toc-num.cyan { color: var(--accent-cyan); }
+        .toc-content { display: flex; flex-direction: column; flex: 1; }
+        .toc-title { font-family: 'Outfit'; font-weight: 600; font-size: 1.05rem; }
+        .toc-page { font-size: 0.8rem; color: var(--text-muted); }
+
+        .slide.active .toc-entry { animation: tocSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        .slide.active .toc-entry:nth-child(1) { animation-delay: 0.05s; }
+        .slide.active .toc-entry:nth-child(2) { animation-delay: 0.1s; }
+        .slide.active .toc-entry:nth-child(3) { animation-delay: 0.15s; }
+        .slide.active .toc-entry:nth-child(4) { animation-delay: 0.2s; }
+        .slide.active .toc-entry:nth-child(5) { animation-delay: 0.25s; }
+        @keyframes tocSlideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .tag {
+            display: inline-block; padding: 0.25rem 0.7rem;
+            border-radius: 14px; font-size: 0.85rem; font-weight: 600;
+            margin: 0.1rem;
+        }
+        .tag-blue { background: rgba(30, 64, 175, 0.1); color: var(--primary); }
+        .tag-green { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .tag-orange { background: rgba(245, 158, 11, 0.1); color: var(--accent-orange); }
+        .tag-red { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
+        .tag-purple { background: rgba(124, 58, 237, 0.1); color: var(--accent-purple); }
+        .tag-cyan { background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan); }
+
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li {
+            padding: 0.4rem 0; border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 0.8rem; font-size: 0.95rem;
+        }
+        .feature-list li:last-child { border-bottom: none; }
+        .feature-list li::before {
+            content: '\2192'; color: var(--accent-green);
+            font-weight: bold; font-size: 1.2rem;
+        }
+
+        .progress-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 3px;
+            background: rgba(30, 64, 175, 0.1); z-index: 200;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-purple), var(--accent-orange));
+            transition: width 0.4s ease;
+        }
+        .slide-counter { font-family: 'Fira Code'; font-size: 0.85rem; color: var(--text-muted); }
+
+        nav {
+            position: fixed; bottom: 2rem; left: 50%;
+            transform: translateX(-50%);
+            display: flex; align-items: center; gap: 1.2rem;
+            z-index: 200;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 0.6rem 1.5rem; border-radius: 50px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+        .nav-btn {
+            background: transparent; border: none; cursor: pointer;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--primary); transition: all 0.2s ease;
+            font-size: 1.2rem;
+        }
+        .nav-btn:hover { background: rgba(30, 64, 175, 0.08); transform: scale(1.1); }
+        .nav-separator { width: 1px; height: 20px; background: rgba(30, 64, 175, 0.15); }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(30, 64, 175, 0.08);
+            padding: 0.15rem 0.35rem; border-radius: 4px;
+            font-size: 0.82em; color: var(--primary);
+        }
+
+        .pillar-card {
+            background: var(--bg-card); border: 2px solid var(--border-light);
+            border-radius: 16px; padding: 1.4rem; text-align: center;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .pillar-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        }
+        .pillar-card.p1::before { background: var(--accent-green); }
+        .pillar-card.p2::before { background: var(--accent-purple); }
+        .pillar-card.p3::before { background: var(--accent-orange); }
+        .pillar-num {
+            font-family: 'Fira Code'; font-size: 2.5rem; font-weight: 800;
+            opacity: 0.15; position: absolute; top: 0.5rem; right: 1rem;
+        }
+        .pillar-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+        .pillar-title {
+            font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+        }
+        .pillar-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+
+        .level-indicator {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.15rem 0.5rem; border-radius: 8px;
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;
+        }
+        .level-1 { background: rgba(30, 64, 175, 0.1); color: var(--primary); }
+        .level-2 { background: rgba(124, 58, 237, 0.1); color: var(--accent-purple); }
+        .level-3 { background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan); }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(25px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide.active .card, .slide.active .pillar-card {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        .slide.active .card:nth-child(1), .slide.active .pillar-card:nth-child(1) { animation-delay: 0.1s; }
+        .slide.active .card:nth-child(2), .slide.active .pillar-card:nth-child(2) { animation-delay: 0.2s; }
+        .slide.active .card:nth-child(3), .slide.active .pillar-card:nth-child(3) { animation-delay: 0.3s; }
+        .slide.active .card:nth-child(4) { animation-delay: 0.35s; }
+        .slide.active table {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+            animation-delay: 0.15s;
+        }
+        .slide.active .info-box, .slide.active .success-box, .slide.active .warning-box {
+            animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+            animation-delay: 0.3s;
+        }
+        .slide.active .slide-header {
+            animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        .slide.active .metric-card {
+            animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        .slide.active .formula-box {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+            animation-delay: 0.2s;
+        }
+
+        .text-center { text-align: center; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+
+        .step-row {
+            display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 0;
+        }
+        .step-num {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Fira Code'; font-weight: 700; font-size: 0.85rem;
+            color: white; flex-shrink: 0;
+        }
+        .step-num.green { background: var(--accent-green); }
+        .step-num.purple { background: var(--accent-purple); }
+        .step-num.orange { background: var(--accent-orange); }
+        .step-num.blue { background: var(--primary); }
+        .step-text { font-size: 0.92rem; line-height: 1.4; }
+
+        @media print {
+            @page { size: landscape; margin: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            body { overflow: visible; height: auto; background: white; }
+            header { display: none; }
+            nav { display: none !important; }
+            .progress-bar { display: none !important; }
+            .pdf-btn { display: none !important; }
+            .slide {
+                position: relative !important; top: auto !important; left: auto !important;
+                right: auto !important; bottom: auto !important;
+                opacity: 1 !important; transform: none !important; pointer-events: all !important;
+                display: flex !important; align-items: center; justify-content: center;
+                width: 100vw; height: 100vh; padding: 1.5rem 2.5rem;
+                page-break-after: always; page-break-inside: avoid;
+                break-after: page; break-inside: avoid;
+            }
+            .slide:last-child { page-break-after: auto; }
+            .card, .metric-card, .pillar-card { box-shadow: none; border: 1px solid #e2e8f0; }
+            .info-box, .success-box, .warning-box, .formula-box, table { break-inside: avoid; }
+            .slide::after {
+                content: counter(slide-counter); counter-increment: slide-counter;
+                position: absolute; bottom: 0.8rem; right: 1.5rem;
+                font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #94a3b8;
+            }
+            body { counter-reset: slide-counter; }
+            .slide .card, .slide .pillar-card, .slide table, .slide .info-box,
+            .slide .success-box, .slide .warning-box, .slide .slide-header,
+            .slide .metric-card, .slide .formula-box, .slide .toc-entry {
+                animation: none !important; opacity: 1 !important; transform: none !important;
+            }
+            .content-single, .content-full {
+                transform: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 auto !important;
+            }
+            main#slides-container { width: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-left">
+            <img src="https://www.supcom.tn/storage/app/public/coordonnees/April2025/aa8HeWk95QdtPlGED1ZY.png"
+                alt="Sup'Com" class="institution-logo" onerror="this.style.display='none'">
+        </div>
+        <div class="header-center">
+            <div class="logo">
+                Classification Non Supervisée
+                <span class="logo-sub">Cours Compact &mdash; K-means, CAH, ACP</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="supervisor-badge">
+                <div class="supervisor-info">
+                    <div class="supervisor-label">Professeur</div>
+                    <div class="supervisor-name">Riadh ABDELFATTAH</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="slides-container">
+
+        <!-- ===================== SLIDE 0 : COVER ===================== -->
+        <div class="slide active">
+            <div class="content-full text-center">
+                <h1 class="hero-title">Classification <span class="accent">Non Supervisée</span><br>
+                    <span style="font-size: 0.5em; font-weight: 500;">K-means &middot; CAH &middot; ACP</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Trouver la structure cachée dans les données, sans étiquettes ni professeur.
+                    <br>Trois piliers, trois géométries, une même quête : faire parler les données.
+                </p>
+
+                <div class="grid-3 mt-2" style="max-width: 900px; margin-left: auto; margin-right: auto;">
+                    <div class="pillar-card p1">
+                        <div class="pillar-num">1</div>
+                        <div class="pillar-icon">&#127919;</div>
+                        <div class="pillar-title">K-means</div>
+                        <div class="pillar-desc">Regrouper autour de $K$ centres, en minimisant l'inertie intra-classe</div>
+                    </div>
+                    <div class="pillar-card p2">
+                        <div class="pillar-num">2</div>
+                        <div class="pillar-icon">&#127794;</div>
+                        <div class="pillar-title">CAH</div>
+                        <div class="pillar-desc">Construire un arbre de classes par fusions successives</div>
+                    </div>
+                    <div class="pillar-card p3">
+                        <div class="pillar-num">3</div>
+                        <div class="pillar-icon">&#128202;</div>
+                        <div class="pillar-title">ACP</div>
+                        <div class="pillar-desc">Réduire la dimension en gardant un maximum de variance</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.95rem;">
+                    <strong>Riadh Abdelfattah</strong> &mdash; SupCom 2026 &middot; Chapitre V
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 1 : SOMMAIRE ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header" style="border-bottom: none; margin-bottom: 0.8rem;">
+                    <h2 class="slide-title" style="font-size: 2.2rem; letter-spacing: -0.03em;">
+                        <span style="color: var(--primary);">&mdash;</span> Sommaire
+                    </h2>
+                </div>
+                <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 1.5rem; font-style: italic;">
+                    50 slides du cours &rarr; 18 slides compactes en 5 actes
+                </p>
+                <div class="toc-grid">
+                    <div>
+                        <div class="toc-entry" onclick="goToSlide(2)">
+                            <div class="toc-num">A</div>
+                            <div class="toc-content">
+                                <span class="toc-title">Fondations</span>
+                                <span class="toc-page">Supervisé vs non, distances, inerties</span>
+                            </div>
+                        </div>
+                        <div class="toc-entry" onclick="goToSlide(6)">
+                            <div class="toc-num green">B</div>
+                            <div class="toc-content">
+                                <span class="toc-title">K-means (K-moyennes)</span>
+                                <span class="toc-page">Centres, itération, choix de $K$</span>
+                            </div>
+                        </div>
+                        <div class="toc-entry" onclick="goToSlide(9)">
+                            <div class="toc-num purple">C</div>
+                            <div class="toc-content">
+                                <span class="toc-title">Classification Hiérarchique</span>
+                                <span class="toc-page">Fusions, dendogramme, critères</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="toc-entry" onclick="goToSlide(12)">
+                            <div class="toc-num orange">D</div>
+                            <div class="toc-content">
+                                <span class="toc-title">Analyse en Composantes Principales</span>
+                                <span class="toc-page">Corrélation, projection, variance expliquée</span>
+                            </div>
+                        </div>
+                        <div class="toc-entry" onclick="goToSlide(17)">
+                            <div class="toc-num cyan">E</div>
+                            <div class="toc-content">
+                                <span class="toc-title">Synthèse &amp; Décision</span>
+                                <span class="toc-page">Comparaison et messages clés</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;">
+                        <span class="level-indicator level-1">N1</span> Analogie &amp; intuition
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;">
+                        <span class="level-indicator level-2">N2</span> Concepts clés
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;">
+                        <span class="level-indicator level-3">N3</span> Détails techniques
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 2 : ACTE A &mdash; SUPERVISE VS NON SUPERVISE ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge">Acte A &mdash; Fondations</span>
+                    <h2 class="slide-title">Supervisé vs Non supervisé</h2>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-1">N1</span> &#128218; Supervisé : l'élève avec corrigé</div>
+                            <div class="card-text">
+                                <p>Chaque exemple a une <strong>étiquette $y_i$</strong> connue : spam/non-spam, chat/chien.</p>
+                                <p class="mt-1">Le modèle apprend en comparant ses prédictions aux vraies réponses.</p>
+                                <p class="mt-1" style="color: var(--primary); font-weight: 600;">&rarr; KNN, SVM, Bayes Naïf (chap. IV)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card" style="border-left: 4px solid var(--accent-green);">
+                            <div class="card-title"><span class="level-indicator level-1">N1</span> &#129488; Non supervisé : l'explorateur sans carte</div>
+                            <div class="card-text">
+                                <p>Pas d'étiquettes. On cherche la <strong>structure cachée</strong> dans les données brutes.</p>
+                                <p class="mt-1">On ne connaît ni le <em>nombre</em> de groupes, ni la <em>classe</em> de chaque observation.</p>
+                                <p class="mt-1" style="color: var(--accent-green); font-weight: 600;">&rarr; K-means, CAH, ACP (ce chap. V)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box mt-2">
+                    <div class="info-box-title">&#128161; L'idée centrale en une phrase</div>
+                    <p>A partir d'un nuage de points $\{x_1, \ldots, x_n\}$ <strong>sans étiquettes</strong>, on cherche à les regrouper en classes <em>homogènes</em> (similaires entre elles) et <em>séparées</em> (différentes des autres classes). Pas de prof, juste la géométrie.</p>
+                </div>
+
+                <div class="grid-3 mt-2">
+                    <div class="metric-card success">
+                        <div class="metric-value">3</div>
+                        <div class="metric-label">Tâches non supervisées</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-value">2</div>
+                        <div class="metric-label">Critères : compacité &amp; séparation</div>
+                    </div>
+                    <div class="metric-card warning">
+                        <div class="metric-value">0</div>
+                        <div class="metric-label">Étiquettes nécessaires</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 3 : ACTE A &mdash; LES 3 TACHES ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge">Acte A &mdash; Fondations</span>
+                    <h2 class="slide-title">Les trois grandes tâches du non supervisé</h2>
+                </div>
+                <div class="grid-3">
+                    <div class="card" style="border-top: 3px solid var(--accent-green);">
+                        <div class="card-icon">&#128101;</div>
+                        <div class="card-title" style="color: var(--accent-green);">Clustering</div>
+                        <div class="card-text">
+                            <p>Regrouper des observations similaires en classes.</p>
+                            <p class="mt-1"><span class="tag tag-green">K-means</span> <span class="tag tag-green">CAH</span> <span class="tag tag-green">DBSCAN</span></p>
+                            <p class="mt-1" style="font-style: italic;">Ex : segmenter une clientèle en profils types.</p>
+                        </div>
+                    </div>
+                    <div class="card" style="border-top: 3px solid var(--accent-purple);">
+                        <div class="card-icon">&#128279;</div>
+                        <div class="card-title" style="color: var(--accent-purple);">Règles d'association</div>
+                        <div class="card-text">
+                            <p>Trouver des co-occurrences fréquentes entre items.</p>
+                            <p class="mt-1"><span class="tag tag-purple">Apriori</span> <span class="tag tag-purple">FP-Growth</span></p>
+                            <p class="mt-1" style="font-style: italic;">Ex : « ceux qui achètent du pain prennent souvent du beurre ».</p>
+                        </div>
+                    </div>
+                    <div class="card" style="border-top: 3px solid var(--accent-orange);">
+                        <div class="card-icon">&#128202;</div>
+                        <div class="card-title" style="color: var(--accent-orange);">Réduction de dimension</div>
+                        <div class="card-text">
+                            <p>Compresser les données en gardant l'essentiel.</p>
+                            <p class="mt-1"><span class="tag tag-orange">ACP</span> <span class="tag tag-orange">LDA</span> <span class="tag tag-orange">SVD</span></p>
+                            <p class="mt-1" style="font-style: italic;">Ex : visualiser un nuage 100D en 2D.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="success-box mt-2">
+                    <div class="success-box-title">&#9745; Deux familles de méthodes de clustering</div>
+                    <p><strong>Exploratoires (géométriques)</strong> &mdash; pas de modèle statistique, juste des distances. <em>Partitionnement</em> (K-means) ou <em>hiérarchique</em> (CAH).
+                    <br><strong>Probabilistes</strong> &mdash; on suppose que les données viennent d'un mélange de distributions (modèles de mélange, EM).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 4 : ACTE A &mdash; DISTANCES ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge">Acte A &mdash; Fondations</span>
+                    <h2 class="slide-title">Mesurer la ressemblance : similarité, dissimilarité, distance</h2>
+                </div>
+
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-title"><span class="level-indicator level-2">N2</span> Dissimilarité $d$</div>
+                        <div class="card-text">
+                            <p>Plus elle est grande, plus les objets sont différents.</p>
+                            <ul class="feature-list mt-1">
+                                <li>$d(x_1, x_2) \geq 0$</li>
+                                <li>$d(x_1, x_1) = 0$</li>
+                                <li>$d(x_1, x_2) = d(x_2, x_1)$</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><span class="level-indicator level-2">N2</span> Similarité $s$</div>
+                        <div class="card-text">
+                            <p>L'inverse : grande $\Rightarrow$ proche.</p>
+                            <ul class="feature-list mt-1">
+                                <li>$s(x_1, x_2) \geq 0$</li>
+                                <li>$s(x_1, x_1) = s_{\max}$</li>
+                                <li>$s(x_1, x_2) = s(x_2, x_1)$</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card" style="border-left: 4px solid var(--accent-green);">
+                        <div class="card-title" style="color: var(--accent-green);"><span class="level-indicator level-2">N2</span> Distance (cas particulier)</div>
+                        <div class="card-text">
+                            <p>Une dissimilarité qui vérifie aussi :</p>
+                            <ul class="feature-list mt-1">
+                                <li>Inégalité triangulaire : $d(x_1, x_3) \leq d(x_1, x_2) + d(x_2, x_3)$</li>
+                                <li>$d(x_1, x_2) = 0 \Leftrightarrow x_1 = x_2$</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2 mt-2">
+                    <div class="formula-box">
+                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.4rem;">Distance euclidienne (la plus utilisée)</div>
+                        $$d(x, y) = \sqrt{\sum_{j=1}^{p}(x_j - y_j)^2}$$
+                    </div>
+                    <div class="formula-box" style="background: rgba(16,185,129,0.04); border-color: rgba(16,185,129,0.2);">
+                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.4rem;">Distance de Manhattan</div>
+                        $$d(x, y) = \sum_{j=1}^{p}|x_j - y_j|$$
+                    </div>
+                </div>
+
+                <div class="info-box mt-1">
+                    <div class="info-box-title">&#128161; Pourquoi c'est central</div>
+                    <p>Toute la classification non supervisée <em>exploratoire</em> repose sur ce choix. Changer de distance = changer la géométrie = changer les clusters. Le choix dépend du type de variables (quantitatives, qualitatives, catégorielles).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 5 : ACTE A &mdash; INERTIES ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge">Acte A &mdash; Fondations</span>
+                    <h2 class="slide-title">Barycentre, inerties &amp; théorème de Huygens</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-2">N2</span> Le barycentre $x_G$</div>
+                            <div class="card-text">
+                                <p>Centre de gravité du nuage : la « moyenne » des points.</p>
+                                <div class="formula-box mt-1" style="padding: 0.6rem;">
+                                    $$x_G = \frac{1}{n}\sum_{i=1}^{n} x_i$$
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mt-1" style="border-left: 4px solid var(--primary);">
+                            <div class="card-title">Inertie totale $I_T$</div>
+                            <div class="card-text">
+                                <p>Somme des carrés des distances au barycentre &mdash; mesure la dispersion globale.</p>
+                                <div class="formula-box mt-1" style="padding: 0.6rem;">
+                                    $$I_T = \sum_{i=1}^{n} \|x_i - x_G\|^2$$
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Décomposition de Huygens</div>
+                            <svg viewBox="0 0 280 200" style="max-width: 100%; margin-top: 0.3rem;">
+                                <!-- big cloud center -->
+                                <circle cx="140" cy="100" r="6" fill="#1e40af" />
+                                <text x="140" y="118" font-size="9" fill="#1e40af" font-weight="700" text-anchor="middle">$x_G$</text>
+
+                                <!-- Cluster 1 (green) -->
+                                <ellipse cx="70" cy="60" rx="40" ry="28" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2"/>
+                                <circle cx="70" cy="60" r="4" fill="#10b981" />
+                                <text x="70" y="78" font-size="8" fill="#047857" font-weight="700" text-anchor="middle">$x_{C_1}$</text>
+                                <circle cx="55" cy="50" r="3" fill="#10b981" opacity="0.6" />
+                                <circle cx="80" cy="48" r="3" fill="#10b981" opacity="0.6" />
+                                <circle cx="60" cy="70" r="3" fill="#10b981" opacity="0.6" />
+                                <circle cx="85" cy="68" r="3" fill="#10b981" opacity="0.6" />
+
+                                <!-- Cluster 2 (purple) -->
+                                <ellipse cx="200" cy="140" rx="45" ry="30" fill="rgba(124,58,237,0.12)" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4,2"/>
+                                <circle cx="200" cy="140" r="4" fill="#7c3aed" />
+                                <text x="200" y="160" font-size="8" fill="#5b21b6" font-weight="700" text-anchor="middle">$x_{C_2}$</text>
+                                <circle cx="185" cy="130" r="3" fill="#7c3aed" opacity="0.6" />
+                                <circle cx="215" cy="130" r="3" fill="#7c3aed" opacity="0.6" />
+                                <circle cx="190" cy="150" r="3" fill="#7c3aed" opacity="0.6" />
+                                <circle cx="220" cy="148" r="3" fill="#7c3aed" opacity="0.6" />
+
+                                <!-- IB arrow xG to barycenters -->
+                                <line x1="140" y1="100" x2="70" y2="60" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>
+                                <line x1="140" y1="100" x2="200" y2="140" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>
+                                <text x="100" y="85" font-size="9" fill="#d97706" font-weight="700">$I_B$</text>
+
+                                <!-- IW arrow inside cluster -->
+                                <line x1="70" y1="60" x2="55" y2="50" stroke="#10b981" stroke-width="1.5"/>
+                                <text x="40" y="42" font-size="9" fill="#047857" font-weight="700">$I_W$</text>
+
+                                <!-- Legend -->
+                                <text x="10" y="190" font-size="9" fill="#64748b">Vert = inertie intra (compacité), Orange = inertie inter (séparation)</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formula-box mt-2" style="background: linear-gradient(90deg, rgba(30,64,175,0.05), rgba(245,158,11,0.05));">
+                    <div style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Théorème de Huygens : la dispersion totale se décompose</div>
+                    $$\underbrace{I_T}_{\text{totale}} = \underbrace{\sum_{k=1}^{K}\sum_{x_i \in C_k} \|x_i - x_{C_k}\|^2}_{I_W \text{ intra-classes (compacité)}} + \underbrace{\sum_{k=1}^{K} n_k \|x_{C_k} - x_G\|^2}_{I_B \text{ inter-classes (séparation)}}$$
+                </div>
+
+                <div class="success-box mt-1">
+                    <div class="success-box-title">&#127919; La règle d'or du clustering</div>
+                    <p><strong>$I_T$ est fixe</strong> (ne dépend pas du clustering). Donc minimiser $I_W$ $\Leftrightarrow$ maximiser $I_B$. <em>Bons clusters = points compacts à l'intérieur ET centres bien séparés</em>. C'est exactement ce que fait K-means.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 6 : ACTE B &mdash; K-MEANS INTUITION ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge kmeans">Acte B &mdash; K-means</span>
+                    <h2 class="slide-title">K-means : l'intuition des planètes &amp; satellites</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-1">N1</span> &#127759; L'analogie cosmique</div>
+                            <div class="card-text">
+                                <p>Imagine $K$ planètes (les <strong>centres</strong>) dispersées dans un nuage d'étoiles (les <strong>données</strong>).</p>
+                                <p class="mt-1">Chaque étoile rejoint la planète la plus proche &mdash; elle devient son satellite.</p>
+                                <p class="mt-1">Chaque planète se déplace au <strong>barycentre</strong> de ses satellites.</p>
+                                <p class="mt-1" style="color: var(--accent-green); font-weight: 600;">&#128161; On répète jusqu'à ce que plus rien ne bouge : <em>convergence</em>.</p>
+                            </div>
+                        </div>
+                        <div class="info-box mt-1">
+                            <div class="info-box-title">&#127919; L'objectif mathématique</div>
+                            <p>K-means cherche à <strong>minimiser l'inertie intra-classe $I_W$</strong> :</p>
+                            <div class="formula-box mt-1" style="padding: 0.5rem; font-size: 0.95rem;">
+                                $$\min_{C_1, \ldots, C_K} \sum_{k=1}^{K}\sum_{x_i \in C_k} \|x_i - x_{C_k}\|^2$$
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Visualisation : 4 points, 2 classes</div>
+                            <svg viewBox="0 0 280 220" style="max-width: 100%; margin-top: 0.3rem;">
+                                <!-- Axes -->
+                                <line x1="35" y1="195" x2="265" y2="195" stroke="#cbd5e1" stroke-width="1" />
+                                <line x1="35" y1="195" x2="35" y2="15" stroke="#cbd5e1" stroke-width="1" />
+                                <text x="265" y="210" font-size="9" fill="#94a3b8" text-anchor="end">$x_1$</text>
+                                <text x="20" y="20" font-size="9" fill="#94a3b8">$x_2$</text>
+
+                                <!-- Initial centers (stars) -->
+                                <polygon points="80,60 84,72 96,72 86,80 90,92 80,84 70,92 74,80 64,72 76,72" fill="#10b981" stroke="white" stroke-width="1.5"/>
+                                <polygon points="200,140 204,152 216,152 206,160 210,172 200,164 190,172 194,160 184,152 196,152" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+
+                                <!-- Points -->
+                                <circle cx="60" cy="100" r="6" fill="#10b981" opacity="0.7"/>
+                                <circle cx="100" cy="80" r="6" fill="#10b981" opacity="0.7"/>
+                                <circle cx="180" cy="160" r="6" fill="#7c3aed" opacity="0.7"/>
+                                <circle cx="220" cy="130" r="6" fill="#7c3aed" opacity="0.7"/>
+
+                                <!-- Edges to centers -->
+                                <line x1="60" y1="100" x2="80" y2="78" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2"/>
+                                <line x1="100" y1="80" x2="80" y2="78" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2"/>
+                                <line x1="180" y1="160" x2="200" y2="158" stroke="#7c3aed" stroke-width="1" stroke-dasharray="2,2"/>
+                                <line x1="220" y1="130" x2="200" y2="158" stroke="#7c3aed" stroke-width="1" stroke-dasharray="2,2"/>
+
+                                <!-- Labels -->
+                                <text x="80" y="50" font-size="9" fill="#047857" font-weight="700" text-anchor="middle">$x_{C_1}$</text>
+                                <text x="200" y="190" font-size="9" fill="#5b21b6" font-weight="700" text-anchor="middle">$x_{C_2}$</text>
+
+                                <text x="140" y="20" font-size="9" fill="#64748b" text-anchor="middle">2 centres &amp; satellites</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 7 : ACTE B &mdash; K-MEANS ALGO ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge kmeans">Acte B &mdash; K-means</span>
+                    <h2 class="slide-title">L'algorithme en 4 étapes</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="step-row"><div class="step-num green">1</div><div class="step-text"><strong>Choisir $K$</strong> (nombre de classes voulu) et tirer $K$ centres au hasard parmi les points.</div></div>
+                            <div class="step-row"><div class="step-num green">2</div><div class="step-text"><strong>Affecter</strong> chaque point au centre le plus proche (distance euclidienne).</div></div>
+                            <div class="step-row"><div class="step-num green">3</div><div class="step-text"><strong>Recalculer</strong> les centres comme barycentres des nouvelles classes.</div></div>
+                            <div class="step-row"><div class="step-num green">4</div><div class="step-text"><strong>Répéter</strong> 2 et 3 jusqu'à stabilité (les centres ne bougent plus).</div></div>
+
+                            <div class="success-box mt-2" style="padding: 0.6rem 0.9rem;">
+                                <p style="font-size: 0.88rem;"><strong>Convergence garantie</strong> vers un <em>minimum local</em> de $I_W$ (mais pas forcément global).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center; padding: 0.8rem;">
+                            <div class="card-title" style="font-size: 1rem;">Itérations &mdash; les centres convergent</div>
+                            <svg viewBox="0 0 360 220" style="max-width: 100%;">
+                                <!-- Iter 1 -->
+                                <text x="60" y="15" font-size="10" fill="#1e40af" font-weight="700" text-anchor="middle">Iter 1 (init)</text>
+                                <rect x="10" y="20" width="100" height="95" fill="rgba(248,250,252,0.6)" stroke="#e2e8f0" rx="6"/>
+                                <circle cx="35" cy="45" r="4" fill="#10b981" opacity="0.5"/>
+                                <circle cx="55" cy="38" r="4" fill="#10b981" opacity="0.5"/>
+                                <circle cx="42" cy="60" r="4" fill="#10b981" opacity="0.5"/>
+                                <circle cx="78" cy="80" r="4" fill="#7c3aed" opacity="0.5"/>
+                                <circle cx="92" cy="92" r="4" fill="#7c3aed" opacity="0.5"/>
+                                <circle cx="68" cy="95" r="4" fill="#7c3aed" opacity="0.5"/>
+                                <polygon points="50,30 53,38 61,38 55,43 58,51 50,46 42,51 45,43 39,38 47,38" fill="#10b981" stroke="white" stroke-width="1"/>
+                                <polygon points="80,75 83,83 91,83 85,88 88,96 80,91 72,96 75,88 69,83 77,83" fill="#7c3aed" stroke="white" stroke-width="1"/>
+
+                                <!-- Iter 2 -->
+                                <text x="180" y="15" font-size="10" fill="#1e40af" font-weight="700" text-anchor="middle">Iter 2</text>
+                                <rect x="130" y="20" width="100" height="95" fill="rgba(248,250,252,0.6)" stroke="#e2e8f0" rx="6"/>
+                                <circle cx="155" cy="45" r="4" fill="#10b981" opacity="0.7"/>
+                                <circle cx="175" cy="38" r="4" fill="#10b981" opacity="0.7"/>
+                                <circle cx="162" cy="60" r="4" fill="#10b981" opacity="0.7"/>
+                                <circle cx="198" cy="80" r="4" fill="#7c3aed" opacity="0.7"/>
+                                <circle cx="212" cy="92" r="4" fill="#7c3aed" opacity="0.7"/>
+                                <circle cx="188" cy="95" r="4" fill="#7c3aed" opacity="0.7"/>
+                                <polygon points="164,42 167,50 175,50 169,55 172,63 164,58 156,63 159,55 153,50 161,50" fill="#10b981" stroke="white" stroke-width="1"/>
+                                <polygon points="199,87 202,95 210,95 204,100 207,108 199,103 191,108 194,100 188,95 196,95" fill="#7c3aed" stroke="white" stroke-width="1"/>
+
+                                <!-- Iter 3 (converged) -->
+                                <text x="300" y="15" font-size="10" fill="#10b981" font-weight="700" text-anchor="middle">Iter 3 &mdash; OK</text>
+                                <rect x="250" y="20" width="100" height="95" fill="rgba(16,185,129,0.05)" stroke="#10b981" rx="6"/>
+                                <circle cx="275" cy="45" r="4" fill="#10b981"/>
+                                <circle cx="295" cy="38" r="4" fill="#10b981"/>
+                                <circle cx="282" cy="60" r="4" fill="#10b981"/>
+                                <circle cx="318" cy="80" r="4" fill="#7c3aed"/>
+                                <circle cx="332" cy="92" r="4" fill="#7c3aed"/>
+                                <circle cx="308" cy="95" r="4" fill="#7c3aed"/>
+                                <polygon points="284,44 287,52 295,52 289,57 292,65 284,60 276,65 279,57 273,52 281,52" fill="#10b981" stroke="white" stroke-width="1.5"/>
+                                <polygon points="319,87 322,95 330,95 324,100 327,108 319,103 311,108 314,100 308,95 316,95" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+
+                                <!-- Inertia evolution -->
+                                <text x="180" y="140" font-size="10" fill="#64748b" font-weight="700" text-anchor="middle">Évolution de $I_W$</text>
+                                <line x1="40" y1="200" x2="320" y2="200" stroke="#cbd5e1" stroke-width="1"/>
+                                <line x1="40" y1="200" x2="40" y2="155" stroke="#cbd5e1" stroke-width="1"/>
+                                <polyline points="60,160 130,180 200,193 270,196 310,196" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                                <circle cx="60" cy="160" r="3" fill="#10b981"/>
+                                <circle cx="130" cy="180" r="3" fill="#10b981"/>
+                                <circle cx="200" cy="193" r="3" fill="#10b981"/>
+                                <circle cx="270" cy="196" r="3" fill="#10b981"/>
+                                <text x="60" y="215" font-size="8" fill="#64748b" text-anchor="middle">1</text>
+                                <text x="130" y="215" font-size="8" fill="#64748b" text-anchor="middle">2</text>
+                                <text x="200" y="215" font-size="8" fill="#64748b" text-anchor="middle">3</text>
+                                <text x="270" y="215" font-size="8" fill="#64748b" text-anchor="middle">4</text>
+                                <text x="180" y="225" font-size="8" fill="#94a3b8" text-anchor="middle">itérations</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 8 : ACTE B &mdash; CHOIX DE K + LIMITES ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge kmeans">Acte B &mdash; K-means</span>
+                    <h2 class="slide-title">Choix de $K$, avantages &amp; limites</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">&#128313; La méthode du coude (elbow)</div>
+                            <svg viewBox="0 0 280 180" style="max-width: 100%;">
+                                <line x1="40" y1="155" x2="260" y2="155" stroke="#cbd5e1" stroke-width="1"/>
+                                <line x1="40" y1="155" x2="40" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="150" y="172" font-size="10" fill="#64748b" text-anchor="middle">Nombre de clusters $K$</text>
+                                <text x="15" y="90" font-size="10" fill="#64748b" text-anchor="middle" transform="rotate(-90 15 90)">$I_W$</text>
+
+                                <!-- Curve -->
+                                <polyline points="60,30 90,60 120,95 150,120 180,135 210,142 240,148"
+                                    fill="none" stroke="#10b981" stroke-width="2.5"/>
+                                <circle cx="60" cy="30" r="4" fill="#10b981"/>
+                                <circle cx="90" cy="60" r="4" fill="#10b981"/>
+                                <circle cx="120" cy="95" r="4" fill="#10b981"/>
+                                <circle cx="150" cy="120" r="6" fill="#f59e0b" stroke="white" stroke-width="2"/>
+                                <circle cx="180" cy="135" r="4" fill="#10b981"/>
+                                <circle cx="210" cy="142" r="4" fill="#10b981"/>
+                                <circle cx="240" cy="148" r="4" fill="#10b981"/>
+
+                                <!-- Elbow annotation -->
+                                <line x1="150" y1="120" x2="170" y2="80" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2"/>
+                                <rect x="170" y="65" width="80" height="22" rx="4" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1"/>
+                                <text x="210" y="79" font-size="10" fill="#d97706" font-weight="700" text-anchor="middle">Coude = $K^*$</text>
+
+                                <text x="60" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">2</text>
+                                <text x="90" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">3</text>
+                                <text x="120" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">4</text>
+                                <text x="150" y="170" font-size="9" fill="#f59e0b" font-weight="700" text-anchor="middle">5</text>
+                                <text x="180" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">6</text>
+                                <text x="210" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">7</text>
+                                <text x="240" y="170" font-size="9" fill="#94a3b8" text-anchor="middle">8</text>
+                            </svg>
+                            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.4rem;">On trace $I_W$ en fonction de $K$ et on cherche le « coude » : ajouter un cluster de plus n'apporte presque plus rien.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="success-box">
+                            <div class="success-box-title">&#10003; Avantages</div>
+                            <ul class="feature-list" style="margin-top: 0.3rem;">
+                                <li>Simple, rapide, scalable (milliers de points)</li>
+                                <li>Réduit l'inertie intra-classe par construction</li>
+                                <li>Bonne base pour explorer un dataset</li>
+                            </ul>
+                        </div>
+
+                        <div class="warning-box mt-1">
+                            <div class="warning-box-title">&#9888; Limites</div>
+                            <ul class="feature-list" style="margin-top: 0.3rem;">
+                                <li>Il faut <strong>spécifier $K$</strong> (méthode du coude, silhouette)</li>
+                                <li>Sensible aux <strong>centres initiaux</strong> &rarr; lancer plusieurs fois (K-means++)</li>
+                                <li>Sensible aux <strong>outliers</strong> (qui tirent les centres)</li>
+                                <li>Pas adapté aux variables <strong>qualitatives</strong> (moyenne ?)</li>
+                                <li>Ne sait <strong>pas trouver des formes non convexes</strong> (cercles imbriqués, croissants)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 9 : ACTE C &mdash; CAH INTUITION ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge cah">Acte C &mdash; CAH</span>
+                    <h2 class="slide-title">Classification Ascendante Hiérarchique : l'arbre des fusions</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-1">N1</span> &#128109; L'analogie des familles</div>
+                            <div class="card-text">
+                                <p>Chaque point commence <strong>seul</strong> (un singleton).</p>
+                                <p class="mt-1">A chaque étape, on fusionne <strong>les deux groupes les plus proches</strong>.</p>
+                                <p class="mt-1">On continue jusqu'à n'avoir <strong>qu'un seul groupe</strong> qui contient tout le monde.</p>
+                                <p class="mt-1" style="color: var(--accent-purple); font-weight: 600;">&#128161; Résultat : un <em>arbre</em> qui raconte l'histoire des fusions &mdash; le <strong>dendogramme</strong>.</p>
+                            </div>
+                        </div>
+
+                        <div class="info-box mt-1">
+                            <div class="info-box-title">&#128203; Différence avec K-means</div>
+                            <p>K-means demande $K$ <em>avant</em> de tourner. La CAH calcule <strong>tous les niveaux à la fois</strong> : on choisit $K$ <em>après</em>, en coupant le dendogramme à la bonne hauteur.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Dendogramme &mdash; couper à la hauteur voulue</div>
+                            <svg viewBox="0 0 320 220" style="max-width: 100%;">
+                                <!-- Axe Y (hauteur de fusion) -->
+                                <line x1="35" y1="200" x2="35" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="20" y="100" font-size="9" fill="#94a3b8" transform="rotate(-90 20 100)" text-anchor="middle">Distance de fusion</text>
+
+                                <!-- Leaves: A B C D E F G H -->
+                                <text x="60" y="215" font-size="10" fill="#64748b" text-anchor="middle">A</text>
+                                <text x="90" y="215" font-size="10" fill="#64748b" text-anchor="middle">B</text>
+                                <text x="120" y="215" font-size="10" fill="#64748b" text-anchor="middle">C</text>
+                                <text x="150" y="215" font-size="10" fill="#64748b" text-anchor="middle">D</text>
+                                <text x="190" y="215" font-size="10" fill="#64748b" text-anchor="middle">E</text>
+                                <text x="220" y="215" font-size="10" fill="#64748b" text-anchor="middle">F</text>
+                                <text x="250" y="215" font-size="10" fill="#64748b" text-anchor="middle">G</text>
+                                <text x="280" y="215" font-size="10" fill="#64748b" text-anchor="middle">H</text>
+
+                                <!-- Tree (left subtree) -->
+                                <line x1="60" y1="200" x2="60" y2="170" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="90" y1="200" x2="90" y2="170" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="60" y1="170" x2="90" y2="170" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="75" y1="170" x2="75" y2="135" stroke="#7c3aed" stroke-width="2"/>
+
+                                <line x1="120" y1="200" x2="120" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="150" y1="200" x2="150" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="120" y1="180" x2="150" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="135" y1="180" x2="135" y2="135" stroke="#7c3aed" stroke-width="2"/>
+
+                                <line x1="75" y1="135" x2="135" y2="135" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="105" y1="135" x2="105" y2="80" stroke="#7c3aed" stroke-width="2"/>
+
+                                <!-- Tree (right subtree) -->
+                                <line x1="190" y1="200" x2="190" y2="175" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="220" y1="200" x2="220" y2="175" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="190" y1="175" x2="220" y2="175" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="205" y1="175" x2="205" y2="140" stroke="#7c3aed" stroke-width="2"/>
+
+                                <line x1="250" y1="200" x2="250" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="280" y1="200" x2="280" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="250" y1="180" x2="280" y2="180" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="265" y1="180" x2="265" y2="140" stroke="#7c3aed" stroke-width="2"/>
+
+                                <line x1="205" y1="140" x2="265" y2="140" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="235" y1="140" x2="235" y2="80" stroke="#7c3aed" stroke-width="2"/>
+
+                                <!-- Top fusion -->
+                                <line x1="105" y1="80" x2="235" y2="80" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="170" y1="80" x2="170" y2="40" stroke="#7c3aed" stroke-width="2"/>
+
+                                <!-- Cut line at K=2 -->
+                                <line x1="35" y1="105" x2="305" y2="105" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>
+                                <text x="305" y="100" font-size="9" fill="#d97706" font-weight="700" text-anchor="end">coupure $K = 2$</text>
+
+                                <text x="170" y="20" font-size="10" fill="#5b21b6" font-weight="700" text-anchor="middle">racine</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 10 : ACTE C &mdash; CAH ALGO ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge cah">Acte C &mdash; CAH</span>
+                    <h2 class="slide-title">L'algorithme &amp; les critères d'agrégation</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title">&#128203; Étapes</div>
+                            <div class="step-row"><div class="step-num purple">1</div><div class="step-text"><strong>Partition initiale</strong> : $n$ singletons (chaque point est son propre cluster).</div></div>
+                            <div class="step-row"><div class="step-num purple">2</div><div class="step-text"><strong>Calculer</strong> la matrice des distances entre tous les clusters.</div></div>
+                            <div class="step-row"><div class="step-num purple">3</div><div class="step-text"><strong>Fusionner</strong> les deux clusters les plus proches selon le critère $D$.</div></div>
+                            <div class="step-row"><div class="step-num purple">4</div><div class="step-text"><strong>Mettre à jour</strong> la matrice des distances et répéter.</div></div>
+                            <div class="step-row"><div class="step-num purple">5</div><div class="step-text"><strong>Stopper</strong> quand il ne reste qu'un seul cluster.</div></div>
+                            <div class="step-row"><div class="step-num orange">&#9986;</div><div class="step-text"><strong>Couper</strong> le dendogramme à la hauteur souhaitée pour obtenir $K$ classes.</div></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="border-top: 3px solid var(--accent-purple);">
+                            <div class="card-title">&#128269; Critères de distance entre classes $D(C_i, C_j)$</div>
+                            <table class="mt-1">
+                                <thead><tr><th>Critère</th><th>Formule</th><th>Effet</th></tr></thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Saut minimum</strong><br><span style="font-size: 0.78rem; color: var(--text-muted);">single linkage</span></td>
+                                        <td>$\min d(x, y)$</td>
+                                        <td>Chaînes étirées</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Saut maximum</strong><br><span style="font-size: 0.78rem; color: var(--text-muted);">complete linkage</span></td>
+                                        <td>$\max d(x, y)$</td>
+                                        <td>Clusters compacts</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Saut moyen</strong><br><span style="font-size: 0.78rem; color: var(--text-muted);">average linkage</span></td>
+                                        <td>$\frac{1}{|C_i||C_j|}\sum d(x, y)$</td>
+                                        <td>Équilibre</td>
+                                    </tr>
+                                    <tr class="best">
+                                        <td><strong>Ward</strong><br><span style="font-size: 0.78rem; color: var(--text-muted);">augmentation de $I_W$</span></td>
+                                        <td>$\Delta I_W$</td>
+                                        <td>Cohérent avec K-means</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box mt-1">
+                    <div class="info-box-title">&#128161; Saut minimum vs saut maximum</div>
+                    <p>Avec le <strong>saut minimum</strong>, deux clusters sont proches dès qu'<em>une</em> paire de points l'est &mdash; risque d'effet de chaîne. Avec le <strong>saut maximum</strong>, il faut que <em>toutes</em> les paires soient proches &mdash; clusters plus sphériques. Ward minimise l'augmentation d'inertie : c'est souvent le meilleur compromis.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 11 : ACTE C &mdash; CAH APPLICATION ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge cah">Acte C &mdash; CAH</span>
+                    <h2 class="slide-title">Application &mdash; 5 échantillons, saut minimum</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title" style="font-size: 1rem;">Données : $\{E_1, \ldots, E_5\}$ en 2D</div>
+                            <table class="mt-1" style="font-size: 0.88rem;">
+                                <thead><tr><th></th><th>Att-1 ($x_1$)</th><th>Att-2 ($x_2$)</th></tr></thead>
+                                <tbody>
+                                    <tr><td><strong>$E_1$</strong></td><td>2</td><td>2</td></tr>
+                                    <tr><td><strong>$E_2$</strong></td><td>7.5</td><td>4</td></tr>
+                                    <tr><td><strong>$E_3$</strong></td><td>3</td><td>3</td></tr>
+                                    <tr><td><strong>$E_4$</strong></td><td>0.5</td><td>5</td></tr>
+                                    <tr><td><strong>$E_5$</strong></td><td>6</td><td>12</td></tr>
+                                </tbody>
+                            </table>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem; font-style: italic;">Distance euclidienne, critère = saut minimum.</p>
+                        </div>
+
+                        <div class="success-box mt-1">
+                            <div class="success-box-title">&#9745; Résultat des fusions</div>
+                            <div class="step-row"><div class="step-num purple">1</div><div class="step-text">$d(E_1, E_3) \approx 1.41$ &rarr; $A = \{E_1, E_3\}$</div></div>
+                            <div class="step-row"><div class="step-num purple">2</div><div class="step-text">$d(E_2, E_5) \approx 8.13$ &rarr; $B = \{E_2, E_5\}$</div></div>
+                            <div class="step-row"><div class="step-num purple">3</div><div class="step-text">$E_4$ rejoint $A$ &rarr; $C = \{E_1, E_3, E_4\}$</div></div>
+                            <div class="step-row"><div class="step-num orange">&#9733;</div><div class="step-text">Fusion finale : $C \cup B$ = tout le monde.</div></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Nuage des points &amp; dendogramme</div>
+                            <svg viewBox="0 0 320 200" style="max-width: 100%; margin-bottom: 0.4rem;">
+                                <!-- Scatter -->
+                                <line x1="20" y1="180" x2="160" y2="180" stroke="#cbd5e1" stroke-width="1"/>
+                                <line x1="20" y1="180" x2="20" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="90" y="195" font-size="9" fill="#94a3b8" text-anchor="middle">$x_1$</text>
+
+                                <!-- Points (scaled : x_max=8, y_max=12 mapped to width 140, height 160) -->
+                                <!-- E1(2,2): x=20+2*15=50, y=180-2*12=156 -->
+                                <circle cx="50" cy="156" r="5" fill="#7c3aed"/>
+                                <text x="58" y="160" font-size="9" fill="#5b21b6" font-weight="700">$E_1$</text>
+                                <!-- E2(7.5,4) : x=20+7.5*15=132.5, y=180-4*12=132 -->
+                                <circle cx="132" cy="132" r="5" fill="#10b981"/>
+                                <text x="140" y="136" font-size="9" fill="#047857" font-weight="700">$E_2$</text>
+                                <!-- E3(3,3): x=65, y=144 -->
+                                <circle cx="65" cy="144" r="5" fill="#7c3aed"/>
+                                <text x="73" y="148" font-size="9" fill="#5b21b6" font-weight="700">$E_3$</text>
+                                <!-- E4(0.5,5): x=27.5, y=120 -->
+                                <circle cx="28" cy="120" r="5" fill="#7c3aed"/>
+                                <text x="36" y="124" font-size="9" fill="#5b21b6" font-weight="700">$E_4$</text>
+                                <!-- E5(6,12): x=110, y=36 -->
+                                <circle cx="110" cy="36" r="5" fill="#10b981"/>
+                                <text x="118" y="40" font-size="9" fill="#047857" font-weight="700">$E_5$</text>
+
+                                <!-- Cluster ellipses -->
+                                <ellipse cx="49" cy="140" rx="35" ry="30" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="3,2"/>
+                                <ellipse cx="121" cy="84" rx="22" ry="55" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                                <!-- Dendogramme on right -->
+                                <text x="245" y="195" font-size="9" fill="#64748b" text-anchor="middle">$E_1$</text>
+                                <text x="265" y="195" font-size="9" fill="#64748b" text-anchor="middle">$E_3$</text>
+                                <text x="285" y="195" font-size="9" fill="#64748b" text-anchor="middle">$E_4$</text>
+                                <text x="305" y="195" font-size="9" fill="#64748b" text-anchor="middle">$E_2$</text>
+                                <text x="320" y="195" font-size="9" fill="#64748b" text-anchor="middle">$E_5$</text>
+
+                                <!-- Tree -->
+                                <line x1="245" y1="180" x2="245" y2="160" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="265" y1="180" x2="265" y2="160" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="245" y1="160" x2="265" y2="160" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="255" y1="160" x2="255" y2="130" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="285" y1="180" x2="285" y2="130" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="255" y1="130" x2="285" y2="130" stroke="#7c3aed" stroke-width="2"/>
+                                <line x1="270" y1="130" x2="270" y2="60" stroke="#7c3aed" stroke-width="2"/>
+
+                                <line x1="305" y1="180" x2="305" y2="100" stroke="#10b981" stroke-width="2"/>
+                                <line x1="320" y1="180" x2="320" y2="100" stroke="#10b981" stroke-width="2"/>
+                                <line x1="305" y1="100" x2="320" y2="100" stroke="#10b981" stroke-width="2"/>
+                                <line x1="312" y1="100" x2="312" y2="60" stroke="#10b981" stroke-width="2"/>
+
+                                <line x1="270" y1="60" x2="312" y2="60" stroke="#1e40af" stroke-width="2"/>
+                                <line x1="291" y1="60" x2="291" y2="30" stroke="#1e40af" stroke-width="2"/>
+
+                                <line x1="200" y1="80" x2="320" y2="80" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+                                <text x="195" y="78" font-size="8" fill="#d97706" font-weight="700" text-anchor="end">coupe $K=2$</text>
+
+                                <text x="280" y="20" font-size="10" fill="#1e40af" font-weight="700" text-anchor="middle">Dendogramme</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 12 : ACTE D &mdash; ACP POURQUOI ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge acp">Acte D &mdash; ACP</span>
+                    <h2 class="slide-title">Pourquoi réduire la dimension ?</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-1">N1</span> &#128209; Le problème</div>
+                            <div class="card-text">
+                                <p>En vraie vie, les données ont des <strong>dizaines voire des milliers</strong> de variables (pixels d'une image, gènes, mots d'un texte...).</p>
+                                <p class="mt-1">Beaucoup sont <strong>corrélées</strong> (donc redondantes) et certaines sont du <strong>bruit</strong>.</p>
+                                <p class="mt-1" style="color: var(--accent-orange); font-weight: 600;">&#128161; Idée : projeter sur un espace de plus petite dimension qui garde l'essentiel.</p>
+                            </div>
+                        </div>
+
+                        <div class="info-box mt-1">
+                            <div class="info-box-title">&#127919; Les 4 bénéfices</div>
+                            <ul class="feature-list" style="margin-top: 0.3rem;">
+                                <li><strong>Visualisation</strong> : passer de $p$D à 2D ou 3D</li>
+                                <li><strong>Compression</strong> : moins de stockage, moins de calcul</li>
+                                <li><strong>Débruitage</strong> : ignorer les directions à faible variance</li>
+                                <li><strong>Pré-traitement</strong> avant un classifieur (KNN, SVM...)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Variables corrélées : redondance visible</div>
+                            <svg viewBox="0 0 280 200" style="max-width: 100%;">
+                                <line x1="30" y1="180" x2="260" y2="180" stroke="#cbd5e1" stroke-width="1"/>
+                                <line x1="30" y1="180" x2="30" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="145" y="195" font-size="10" fill="#64748b" text-anchor="middle">Axe 1 (var. d'origine $X_1$)</text>
+                                <text x="15" y="100" font-size="10" fill="#64748b" text-anchor="middle" transform="rotate(-90 15 100)">Axe 2 ($X_2$)</text>
+
+                                <!-- Cloud (oblique ellipse) -->
+                                <g transform="rotate(-30 145 100)">
+                                    <ellipse cx="145" cy="100" rx="90" ry="22" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.5"/>
+                                </g>
+
+                                <!-- Original points -->
+                                <circle cx="80" cy="140" r="3" fill="#f59e0b"/>
+                                <circle cx="100" cy="125" r="3" fill="#f59e0b"/>
+                                <circle cx="120" cy="115" r="3" fill="#f59e0b"/>
+                                <circle cx="140" cy="105" r="3" fill="#f59e0b"/>
+                                <circle cx="160" cy="90" r="3" fill="#f59e0b"/>
+                                <circle cx="180" cy="80" r="3" fill="#f59e0b"/>
+                                <circle cx="200" cy="65" r="3" fill="#f59e0b"/>
+                                <circle cx="220" cy="55" r="3" fill="#f59e0b"/>
+
+                                <!-- New axes (PC1, PC2) -->
+                                <line x1="55" y1="155" x2="240" y2="50" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arr-purple)"/>
+                                <line x1="125" y1="80" x2="155" y2="135" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr-cyan)"/>
+
+                                <text x="245" y="48" font-size="11" fill="#5b21b6" font-weight="700">PC1 (max var.)</text>
+                                <text x="160" y="135" font-size="10" fill="#0891b2" font-weight="700">PC2</text>
+
+                                <defs>
+                                    <marker id="arr-purple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                                        <polygon points="0,0 8,4 0,8" fill="#7c3aed"/>
+                                    </marker>
+                                    <marker id="arr-cyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                                        <polygon points="0,0 8,4 0,8" fill="#06b6d4"/>
+                                    </marker>
+                                </defs>
+                            </svg>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Les variables initiales $(X_1, X_2)$ sont corrélées. <strong>PC1</strong> = direction qui capte le maximum de variance. <strong>PC2</strong> y est orthogonale.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 13 : ACTE D &mdash; CORRELATION ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge acp">Acte D &mdash; ACP</span>
+                    <h2 class="slide-title">Mesurer la corrélation : Pearson</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="formula-box" style="background: rgba(245,158,11,0.04); border-color: rgba(245,158,11,0.2);">
+                            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.4rem;">Coefficient de Pearson</div>
+                            $$\rho_{X,Y} = \frac{\text{Cov}(X, Y)}{\sigma_X \cdot \sigma_Y}$$
+                        </div>
+
+                        <div class="grid-3 mt-2">
+                            <div class="metric-card success" style="padding: 0.6rem;">
+                                <div class="metric-value" style="font-size: 1.4rem;">$\rho = 1$</div>
+                                <div class="metric-label">Liaison linéaire parfaite (positive)</div>
+                            </div>
+                            <div class="metric-card" style="padding: 0.6rem;">
+                                <div class="metric-value" style="font-size: 1.4rem;">$\rho = 0$</div>
+                                <div class="metric-label">Pas de liaison linéaire</div>
+                            </div>
+                            <div class="metric-card warning" style="padding: 0.6rem;">
+                                <div class="metric-value" style="font-size: 1.4rem;">$\rho = -1$</div>
+                                <div class="metric-label">Liaison linéaire parfaite (négative)</div>
+                            </div>
+                        </div>
+
+                        <div class="success-box mt-1">
+                            <div class="success-box-title">&#128313; Règle pratique</div>
+                            <p>Pour $|\rho| > 0{,}65$ on dit qu'il y a <strong>forte corrélation</strong> &mdash; intéressant de chercher une régression linéaire entre $X$ et $Y$. Plus généralement, plus deux variables sont corrélées, plus elles sont <em>redondantes</em> &mdash; et plus l'ACP est utile.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Heatmap de corrélation (4 variables)</div>
+                            <svg viewBox="0 0 280 220" style="max-width: 100%;">
+                                <!-- Heatmap 4x4 -->
+                                <!-- Row 1 -->
+                                <rect x="60" y="40" width="40" height="40" fill="#7c3aed"/>
+                                <text x="80" y="64" font-size="11" fill="white" font-weight="700" text-anchor="middle">1.00</text>
+                                <rect x="100" y="40" width="40" height="40" fill="#a78bfa"/>
+                                <text x="120" y="64" font-size="11" fill="white" font-weight="700" text-anchor="middle">0.78</text>
+                                <rect x="140" y="40" width="40" height="40" fill="#fde68a"/>
+                                <text x="160" y="64" font-size="11" fill="#92400e" font-weight="700" text-anchor="middle">0.12</text>
+                                <rect x="180" y="40" width="40" height="40" fill="#fca5a5"/>
+                                <text x="200" y="64" font-size="11" fill="#7f1d1d" font-weight="700" text-anchor="middle">-0.42</text>
+                                <!-- Row 2 -->
+                                <rect x="60" y="80" width="40" height="40" fill="#a78bfa"/>
+                                <text x="80" y="104" font-size="11" fill="white" font-weight="700" text-anchor="middle">0.78</text>
+                                <rect x="100" y="80" width="40" height="40" fill="#7c3aed"/>
+                                <text x="120" y="104" font-size="11" fill="white" font-weight="700" text-anchor="middle">1.00</text>
+                                <rect x="140" y="80" width="40" height="40" fill="#fde68a"/>
+                                <text x="160" y="104" font-size="11" fill="#92400e" font-weight="700" text-anchor="middle">0.20</text>
+                                <rect x="180" y="80" width="40" height="40" fill="#fca5a5"/>
+                                <text x="200" y="104" font-size="11" fill="#7f1d1d" font-weight="700" text-anchor="middle">-0.35</text>
+                                <!-- Row 3 -->
+                                <rect x="60" y="120" width="40" height="40" fill="#fde68a"/>
+                                <text x="80" y="144" font-size="11" fill="#92400e" font-weight="700" text-anchor="middle">0.12</text>
+                                <rect x="100" y="120" width="40" height="40" fill="#fde68a"/>
+                                <text x="120" y="144" font-size="11" fill="#92400e" font-weight="700" text-anchor="middle">0.20</text>
+                                <rect x="140" y="120" width="40" height="40" fill="#7c3aed"/>
+                                <text x="160" y="144" font-size="11" fill="white" font-weight="700" text-anchor="middle">1.00</text>
+                                <rect x="180" y="120" width="40" height="40" fill="#c4b5fd"/>
+                                <text x="200" y="144" font-size="11" fill="white" font-weight="700" text-anchor="middle">0.66</text>
+                                <!-- Row 4 -->
+                                <rect x="60" y="160" width="40" height="40" fill="#fca5a5"/>
+                                <text x="80" y="184" font-size="11" fill="#7f1d1d" font-weight="700" text-anchor="middle">-0.42</text>
+                                <rect x="100" y="160" width="40" height="40" fill="#fca5a5"/>
+                                <text x="120" y="184" font-size="11" fill="#7f1d1d" font-weight="700" text-anchor="middle">-0.35</text>
+                                <rect x="140" y="160" width="40" height="40" fill="#c4b5fd"/>
+                                <text x="160" y="184" font-size="11" fill="white" font-weight="700" text-anchor="middle">0.66</text>
+                                <rect x="180" y="160" width="40" height="40" fill="#7c3aed"/>
+                                <text x="200" y="184" font-size="11" fill="white" font-weight="700" text-anchor="middle">1.00</text>
+
+                                <!-- Headers -->
+                                <text x="80" y="32" font-size="10" fill="#64748b" text-anchor="middle">Math</text>
+                                <text x="120" y="32" font-size="10" fill="#64748b" text-anchor="middle">Phys</text>
+                                <text x="160" y="32" font-size="10" fill="#64748b" text-anchor="middle">Fr</text>
+                                <text x="200" y="32" font-size="10" fill="#64748b" text-anchor="middle">Angl</text>
+
+                                <text x="55" y="64" font-size="10" fill="#64748b" text-anchor="end">Math</text>
+                                <text x="55" y="104" font-size="10" fill="#64748b" text-anchor="end">Phys</text>
+                                <text x="55" y="144" font-size="10" fill="#64748b" text-anchor="end">Fr</text>
+                                <text x="55" y="184" font-size="10" fill="#64748b" text-anchor="end">Angl</text>
+
+                                <text x="140" y="215" font-size="9" fill="#94a3b8" text-anchor="middle" font-style="italic">Math &amp; Phys corrélées, Fr &amp; Angl corrélées</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 14 : ACTE D &mdash; ACP PRINCIPE ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge acp">Acte D &mdash; ACP</span>
+                    <h2 class="slide-title">Le principe : projeter pour maximiser la variance</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-2">N2</span> &#128209; L'idée géométrique</div>
+                            <div class="card-text">
+                                <p>L'ACP cherche une <strong>nouvelle base orthonormée</strong> $(w_1, w_2, \ldots)$ telle que :</p>
+                                <ul class="feature-list mt-1">
+                                    <li>Les nouveaux axes sont des <strong>combinaisons linéaires</strong> des variables initiales</li>
+                                    <li>Ils sont <strong>décorrélés</strong> entre eux (orthogonaux)</li>
+                                    <li>$w_1$ capte la <strong>plus grande variance possible</strong></li>
+                                    <li>$w_2$ capte la plus grande variance restante, etc.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="info-box mt-1">
+                            <div class="info-box-title">&#127919; Trois objectifs de l'ACP</div>
+                            <ul class="feature-list" style="margin-top: 0.3rem;">
+                                <li>Meilleure <strong>représentation</strong> de la variabilité (inertie)</li>
+                                <li>Meilleure <strong>approximation</strong> par projection</li>
+                                <li>Préserver les <strong>distances</strong> entre individus (déformer le moins possible)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="text-align: center;">
+                            <div class="card-title">Projection : on garde $w_1$, on jette le reste</div>
+                            <svg viewBox="0 0 300 220" style="max-width: 100%;">
+                                <!-- Original axes -->
+                                <line x1="30" y1="190" x2="280" y2="190" stroke="#cbd5e1" stroke-width="1"/>
+                                <line x1="30" y1="190" x2="30" y2="20" stroke="#cbd5e1" stroke-width="1"/>
+
+                                <!-- Cloud -->
+                                <ellipse cx="150" cy="110" rx="90" ry="20" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.5" transform="rotate(-25 150 110)"/>
+
+                                <!-- Points -->
+                                <circle cx="80" cy="155" r="4" fill="#f59e0b"/>
+                                <circle cx="105" cy="138" r="4" fill="#f59e0b"/>
+                                <circle cx="130" cy="125" r="4" fill="#f59e0b"/>
+                                <circle cx="155" cy="110" r="4" fill="#f59e0b"/>
+                                <circle cx="180" cy="95" r="4" fill="#f59e0b"/>
+                                <circle cx="205" cy="80" r="4" fill="#f59e0b"/>
+                                <circle cx="225" cy="65" r="4" fill="#f59e0b"/>
+
+                                <!-- PC1 axis -->
+                                <line x1="50" y1="170" x2="250" y2="50" stroke="#7c3aed" stroke-width="2.5"/>
+                                <text x="255" y="50" font-size="11" fill="#5b21b6" font-weight="700">$w_1$</text>
+
+                                <!-- Projections (dashed perpendiculars) -->
+                                <line x1="80" y1="155" x2="98" y2="142" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/>
+                                <line x1="105" y1="138" x2="120" y2="129" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/>
+                                <line x1="130" y1="125" x2="143" y2="118" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/>
+                                <line x1="180" y1="95" x2="195" y2="86" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/>
+                                <line x1="205" y1="80" x2="218" y2="73" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/>
+
+                                <!-- Projected points -->
+                                <circle cx="98" cy="142" r="3" fill="#10b981"/>
+                                <circle cx="120" cy="129" r="3" fill="#10b981"/>
+                                <circle cx="143" cy="118" r="3" fill="#10b981"/>
+                                <circle cx="195" cy="86" r="3" fill="#10b981"/>
+                                <circle cx="218" cy="73" r="3" fill="#10b981"/>
+
+                                <text x="60" y="208" font-size="10" fill="#10b981" font-weight="600">Vert = points projetés sur $w_1$</text>
+                                <text x="60" y="220" font-size="10" fill="#7c3aed" font-weight="600">Violet = nouvel axe principal</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 15 : ACTE D &mdash; AXES PRINCIPAUX ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge acp">Acte D &mdash; ACP</span>
+                    <h2 class="slide-title">Comment trouver les axes principaux ?</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title"><span class="level-indicator level-3">N3</span> &#128301; La recette mathématique</div>
+                            <div class="step-row"><div class="step-num orange">1</div><div class="step-text"><strong>Centrer-réduire</strong> les données : moyenne 0, variance 1.</div></div>
+                            <div class="step-row"><div class="step-num orange">2</div><div class="step-text"><strong>Calculer la matrice de covariance</strong> $\Sigma = \frac{1}{n}X^T X$ ($p \times p$, symétrique, semi-définie positive).</div></div>
+                            <div class="step-row"><div class="step-num orange">3</div><div class="step-text"><strong>Diagonaliser</strong> $\Sigma$ &rarr; vecteurs propres $w_1, \ldots, w_p$ et valeurs propres $\lambda_1 \geq \ldots \geq \lambda_p \geq 0$.</div></div>
+                            <div class="step-row"><div class="step-num orange">4</div><div class="step-text">Les <strong>composantes principales</strong> sont les vecteurs propres triés par valeur propre décroissante.</div></div>
+                            <div class="step-row"><div class="step-num orange">5</div><div class="step-text"><strong>Projeter</strong> : $\tilde{X} = X \cdot W_k$ où $W_k = [w_1 | \ldots | w_k]$.</div></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="formula-box">
+                            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.4rem;">Variance le long de l'axe $w$</div>
+                            $$\text{Var}(w^T X) = w^T \Sigma w$$
+                        </div>
+
+                        <div class="formula-box mt-1" style="background: rgba(245,158,11,0.04); border-color: rgba(245,158,11,0.2);">
+                            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.4rem;">Problème de maximisation</div>
+                            $$\max_{\|w\|=1} w^T \Sigma w \quad \Rightarrow \quad \Sigma w_1 = \lambda_1 w_1$$
+                        </div>
+
+                        <div class="success-box mt-1">
+                            <div class="success-box-title">&#128161; Lecture intuitive</div>
+                            <p><strong>$w_1$ = vecteur propre associé à la plus grande valeur propre $\lambda_1$.</strong> $\lambda_1$ est exactement la <em>variance</em> capturée le long de $w_1$. La 2e CP $w_2$ est orthogonale à $w_1$ et associée à $\lambda_2$, et ainsi de suite.</p>
+                        </div>
+
+                        <div class="info-box mt-1">
+                            <div class="info-box-title">&#128202; Variance expliquée</div>
+                            <p>Variance totale = $\text{Tr}(\Sigma) = \sum \lambda_i$. La proportion expliquée par les $k$ premières CP :</p>
+                            <div class="formula-box mt-1" style="padding: 0.5rem; font-size: 0.95rem;">
+                                $$\frac{\sum_{i=1}^{k} \lambda_i}{\sum_{i=1}^{p} \lambda_i}$$
+                            </div>
+                            <p style="font-size: 0.85rem; margin-top: 0.4rem;">En pratique : on garde $k$ tel qu'on capte 80-95 % de la variance totale.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 16 : ACTE D &mdash; APPLICATION NUMERIQUE ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge acp">Acte D &mdash; ACP</span>
+                    <h2 class="slide-title">Application numérique &mdash; 6 individus, 2 variables</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-title" style="font-size: 1rem;">Données brutes</div>
+                            <table class="mt-1" style="font-size: 0.88rem;">
+                                <thead><tr><th>$i$</th><th>$X_1$</th><th>$X_2$</th></tr></thead>
+                                <tbody>
+                                    <tr><td>1</td><td>2</td><td>1</td></tr>
+                                    <tr><td>2</td><td>3</td><td>5</td></tr>
+                                    <tr><td>3</td><td>4</td><td>3</td></tr>
+                                    <tr><td>4</td><td>5</td><td>6</td></tr>
+                                    <tr><td>5</td><td>6</td><td>7</td></tr>
+                                    <tr><td>6</td><td>7</td><td>8</td></tr>
+                                </tbody>
+                            </table>
+                            <p class="mt-1" style="font-size: 0.85rem;"><strong>Moyennes</strong> : $\bar{X}_1 = 4{,}5$, $\bar{X}_2 = 5$</p>
+                        </div>
+
+                        <div class="formula-box mt-1" style="padding: 0.7rem; font-size: 0.95rem;">
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem;">Matrice de covariance (centrée)</div>
+                            $$\Sigma = \begin{pmatrix} 2{,}92 & 3{,}67 \\ 3{,}67 & 5{,}67 \end{pmatrix}$$
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card" style="border-left: 4px solid var(--accent-orange);">
+                            <div class="card-title">&#128301; Équation caractéristique</div>
+                            <div class="card-text">
+                                <p>$\det(\Sigma - \lambda I) = 0$ donne :</p>
+                                <div class="formula-box mt-1" style="padding: 0.5rem; font-size: 0.92rem;">
+                                    $$(2{,}92 - \lambda)(5{,}67 - \lambda) - 3{,}67^2 = 0$$
+                                </div>
+                                <div class="formula-box mt-1" style="padding: 0.5rem; font-size: 0.92rem;">
+                                    $$\lambda^2 - 8{,}59\lambda + 3{,}09 = 0$$
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-2 mt-2">
+                            <div class="metric-card success">
+                                <div class="metric-value">$\lambda_1 = 8{,}22$</div>
+                                <div class="metric-label">95,6 % de variance</div>
+                            </div>
+                            <div class="metric-card warning">
+                                <div class="metric-value">$\lambda_2 = 0{,}38$</div>
+                                <div class="metric-label">4,4 % &mdash; négligeable</div>
+                            </div>
+                        </div>
+
+                        <div class="success-box mt-2">
+                            <div class="success-box-title">&#127919; Conclusion</div>
+                            <p>Le premier axe $w_1$ porte <strong>95,6 % de l'information</strong> &mdash; on peut passer de 2D à 1D en perdant à peine 5 %. C'est ça, la magie de l'ACP : <em>compression sans perte significative</em>.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 17 : ACTE E &mdash; SYNTHESE ===================== -->
+        <div class="slide">
+            <div class="content-single">
+                <div class="slide-header">
+                    <span class="section-badge synth">Acte E &mdash; Synthèse</span>
+                    <h2 class="slide-title">Comparaison des 3 algorithmes</h2>
+                </div>
+
+                <table class="mt-1">
+                    <thead>
+                        <tr>
+                            <th>Critère</th>
+                            <th style="color: var(--accent-green);">K-means</th>
+                            <th style="color: var(--accent-purple);">CAH</th>
+                            <th style="color: var(--accent-orange);">ACP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Tâche</strong></td>
+                            <td>Clustering plat</td>
+                            <td>Clustering hiérarchique</td>
+                            <td>Réduction de dim.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sortie</strong></td>
+                            <td>$K$ clusters fixes</td>
+                            <td>Dendogramme &mdash; $K$ choisi <em>a posteriori</em></td>
+                            <td>$k$ axes principaux</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hyperparamètre</strong></td>
+                            <td>$K$ (a priori)</td>
+                            <td>Critère $D$ (Ward, min, max)</td>
+                            <td>$k$ (variance cible)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Idée centrale</strong></td>
+                            <td>Minimiser $I_W$</td>
+                            <td>Fusionner les plus proches</td>
+                            <td>Maximiser la variance projetée</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Complexité</strong></td>
+                            <td class="highlight">$O(n K T)$ &mdash; rapide</td>
+                            <td>$O(n^3)$ &mdash; lourd</td>
+                            <td>$O(n p^2 + p^3)$</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Forces</strong></td>
+                            <td>Scalable, simple</td>
+                            <td>Visualisation arborescente, pas de $K$ requis</td>
+                            <td>Compression, débruitage, viz</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Limites</strong></td>
+                            <td>Clusters convexes uniquement, sensible à $K$</td>
+                            <td>Coûteux pour gros $n$</td>
+                            <td>Linéaire seulement (cf. t-SNE, UMAP)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="success-box mt-2">
+                    <div class="success-box-title">&#128161; Pipeline typique en pratique</div>
+                    <p><strong>1.</strong> ACP pour réduire la dimension &amp; visualiser. <strong>2.</strong> CAH pour explorer la structure et choisir $K$. <strong>3.</strong> K-means pour un clustering rapide à grande échelle. Les trois sont <em>complémentaires</em>, pas concurrents.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SLIDE 18 : ACTE E &mdash; MESSAGES CLES ===================== -->
+        <div class="slide">
+            <div class="content-full text-center">
+                <h2 class="slide-title" style="font-size: 2.5rem; letter-spacing: -0.03em;">
+                    <span style="color: var(--primary);">&#8212;</span> Messages clés
+                </h2>
+                <p style="color: var(--text-muted); font-size: 1rem; margin: 0.8rem 0 1.5rem; font-style: italic;">
+                    Ce qu'il faut retenir du chapitre V
+                </p>
+
+                <div class="grid-2 mt-2" style="max-width: 950px; margin-left: auto; margin-right: auto; gap: 1.5rem;">
+                    <div class="card" style="text-align: left;">
+                        <div style="font-size: 2rem; margin-bottom: 0.3rem;">&#127919;</div>
+                        <div class="card-title">1. K-means : la simplicité du barycentre</div>
+                        <div class="card-text">Affecter au centre le plus proche, recalculer, recommencer. Convergence garantie vers un minimum local de l'inertie intra-classe. Rapide, mais $K$ doit être fixé à l'avance.</div>
+                    </div>
+                    <div class="card" style="text-align: left;">
+                        <div style="font-size: 2rem; margin-bottom: 0.3rem;">&#127794;</div>
+                        <div class="card-title">2. CAH : la richesse du dendogramme</div>
+                        <div class="card-text">Pas besoin de fixer $K$ avant de tourner : on coupe l'arbre à la hauteur voulue. Le critère d'agrégation (Ward, saut min/max) change drastiquement le résultat.</div>
+                    </div>
+                    <div class="card" style="text-align: left;">
+                        <div style="font-size: 2rem; margin-bottom: 0.3rem;">&#128202;</div>
+                        <div class="card-title">3. ACP : la puissance de la projection</div>
+                        <div class="card-text">Diagonaliser la covariance, garder les vecteurs propres aux plus grandes valeurs propres. Compression, visualisation, débruitage &mdash; trois pour le prix d'une décomposition.</div>
+                    </div>
+                    <div class="card" style="text-align: left;">
+                        <div style="font-size: 2rem; margin-bottom: 0.3rem;">&#128279;</div>
+                        <div class="card-title">4. Pas de vérité absolue</div>
+                        <div class="card-text">Sans étiquettes, il n'y a pas de « bonne réponse ». Le clustering dépend de la distance, du critère, de la dimension. Toujours valider visuellement, et rester humble face aux résultats.</div>
+                    </div>
+                </div>
+
+                <p style="margin-top: 2rem; font-size: 1.2rem; color: var(--text-muted);">
+                    <strong style="color: var(--primary);">SupCom 2026</strong> &mdash; Riadh Abdelfattah &middot; Chapitre V
+                </p>
+            </div>
+        </div>
+
+    </main>
+
+    <nav>
+        <button class="nav-btn" onclick="prevSlide()" title="Précédent">&#8592;</button>
+        <div class="nav-separator"></div>
+        <span class="slide-counter"><span id="current-slide">1</span> / <span id="total-slides">19</span></span>
+        <div class="nav-separator"></div>
+        <button class="nav-btn" onclick="nextSlide()" title="Suivant">&#8594;</button>
+        <div class="nav-separator"></div>
+        <button class="nav-btn pdf-btn" onclick="exportPDF()" title="Télécharger PDF"
+            style="font-size: 0.85rem; width: auto; padding: 0 0.8rem; border-radius: 20px; background: rgba(30,64,175,0.08); gap: 0.3rem;">
+            &#128196; PDF
+        </button>
+    </nav>
+
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        let currentSlide = 0;
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function autoFitSlide(slideEl) {
+            const content = slideEl.querySelector('.content-single, .content-full');
+            if (!content) return;
+            content.style.transform = '';
+            content.style.transformOrigin = 'center center';
+            requestAnimationFrame(() => {
+                const headerH = 60;
+                const navH = 80;
+                const padV = 60;
+                const padH = 120;
+                const availH = window.innerHeight - headerH - navH - padV;
+                const availW = window.innerWidth - padH;
+                const contentH = content.scrollHeight;
+                const contentW = content.scrollWidth;
+                const scaleH = availH / contentH;
+                const scaleW = availW / contentW;
+                let scale = Math.min(scaleH, scaleW);
+                scale = Math.max(0.6, Math.min(1.25, scale));
+                if (Math.abs(scale - 1) > 0.03) {
+                    content.style.transform = `scale(${scale.toFixed(3)})`;
+                }
+            });
+        }
+
+        function autoFitAll() { slides.forEach(s => autoFitSlide(s)); }
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlide) slide.classList.add('active');
+                else if (index < currentSlide) slide.classList.add('prev');
+            });
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            document.getElementById('progress-fill').style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+            setTimeout(() => autoFitSlide(slides[currentSlide]), 100);
+        }
+
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; updateSlide(); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; updateSlide(); } }
+        function goToSlide(index) { if (index >= 0 && index < totalSlides) { currentSlide = index; updateSlide(); } }
+
+        window.addEventListener('resize', () => autoFitSlide(slides[currentSlide]));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+            else if (e.key === 'Home') { e.preventDefault(); goToSlide(0); }
+            else if (e.key === 'End') { e.preventDefault(); goToSlide(totalSlides - 1); }
+        });
+
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+        document.addEventListener('touchend', (e) => {
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+        });
+
+        function resetTransforms() {
+            slides.forEach(s => {
+                const c = s.querySelector('.content-single, .content-full');
+                if (c) c.style.transform = '';
+            });
+        }
+
+        window.addEventListener('beforeprint', resetTransforms);
+        window.addEventListener('afterprint', () => autoFitSlide(slides[currentSlide]));
+
+        function exportPDF() {
+            document.title = 'Classification Non Supervisée — SupCom 2026';
+            resetTransforms();
+            setTimeout(() => window.print(), 200);
+        }
+
+        updateSlide();
+        window.addEventListener('load', () => {
+            autoFitAll();
+            setTimeout(() => autoFitSlide(slides[currentSlide]), 300);
+        });
+    </script>
+</body>
+
+</html>
