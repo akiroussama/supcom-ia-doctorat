@@ -1,0 +1,588 @@
+"""
+Generate unsupervised learning revision HTML with 30+ exercises.
+Topics: CAH, K-means, ACP, Barycentres/Inerties, Distances.
+Output: revision-non-supervisee-complete.html
+"""
+from pathlib import Path
+
+OUT = Path(__file__).resolve().parent / "revision-non-supervisee-complete.html"
+S = []
+sid = [0]
+
+HEADER = """<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revision Classification Non Supervisee — SupCom 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><!-- --></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"><!-- --></script>
+<style>
+:root{--primary:#7c3aed;--primary-dark:#6d28d9;--accent-green:#10b981;--accent-orange:#f59e0b;--accent-purple:#7c3aed;--accent-cyan:#06b6d4;--accent-red:#ef4444;--text-main:#1e293b;--text-muted:#64748b;--bg-main:#f8fafc;--bg-card:#ffffff;--border-light:#e2e8f0;--shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-main);color:var(--text-main);overflow:hidden;height:100vh;}
+header{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);border-bottom:2px solid rgba(124,58,237,0.1);box-shadow:0 4px 20px rgba(0,0,0,0.08);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 2rem;z-index:100;}
+.header-center{justify-self:center;text-align:center;}
+.logo{font-family:'Outfit';font-weight:700;font-size:1rem;color:var(--text-main);}
+.logo-sub{display:block;font-size:0.65rem;font-weight:400;color:var(--text-muted);letter-spacing:0.5px;}
+.slide{position:absolute;top:56px;left:0;right:0;bottom:48px;display:flex;align-items:flex-start;justify-content:center;opacity:0;transform:translateX(60px);transition:all 0.45s cubic-bezier(0.16,1,0.3,1);pointer-events:none;padding:1rem 2rem;overflow-y:auto;}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all;}
+.slide.prev{opacity:0;transform:translateX(-60px);}
+.content-single{width:100%;max-width:1050px;padding-bottom:1rem;}
+.slide-header{margin-bottom:0.8rem;padding-bottom:0.5rem;border-bottom:2px solid rgba(124,58,237,0.08);}
+.slide-title{font-family:'Outfit';font-weight:800;font-size:1.6rem;color:var(--text-main);letter-spacing:-0.02em;}
+.section-badge{display:inline-block;padding:0.2rem 0.6rem;background:rgba(124,58,237,0.08);color:var(--primary);border-radius:20px;font-size:0.7rem;font-weight:600;margin-bottom:0.3rem;letter-spacing:0.5px;}
+.section-badge.exo{background:rgba(16,185,129,0.1);color:var(--accent-green);}
+.section-badge.correction{background:rgba(239,68,68,0.1);color:var(--accent-red);}
+.section-badge.cah{background:rgba(245,158,11,0.1);color:var(--accent-orange);}
+.section-badge.kmeans{background:rgba(16,185,129,0.1);color:var(--accent-green);}
+.section-badge.acp{background:rgba(6,182,212,0.1);color:var(--accent-cyan);}
+.section-badge.inertie{background:rgba(124,58,237,0.1);color:var(--accent-purple);}
+.level-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.6rem;font-weight:700;margin-left:0.4rem;}
+.level-easy{background:rgba(16,185,129,0.12);color:#059669;}
+.level-medium{background:rgba(245,158,11,0.12);color:#d97706;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;padding:1rem;box-shadow:var(--shadow-sm);}
+.card h3{font-family:'Outfit';font-weight:700;font-size:1rem;margin-bottom:0.4rem;}
+.formula-box{background:rgba(124,58,237,0.03);border:2px solid rgba(124,58,237,0.12);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.formula-box .title{font-family:'Outfit';font-weight:700;font-size:0.85rem;margin-bottom:0.5rem;color:var(--primary);}
+.exo-box{background:rgba(16,185,129,0.03);border:2px solid rgba(16,185,129,0.15);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.exo-box .exo-title{font-family:'Outfit';font-weight:700;font-size:0.95rem;color:var(--accent-green);margin-bottom:0.5rem;}
+.correction-box{background:rgba(239,68,68,0.02);border:2px solid rgba(239,68,68,0.12);border-radius:12px;padding:1rem;margin:0.7rem 0;}
+.correction-box .corr-title{font-family:'Outfit';font-weight:700;font-size:0.95rem;color:var(--accent-red);margin-bottom:0.5rem;}
+.step-row{display:flex;align-items:flex-start;gap:0.5rem;margin:0.4rem 0;}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fira Code';font-weight:700;font-size:0.8rem;color:white;flex-shrink:0;background:var(--primary);}
+.step-text{font-size:0.85rem;line-height:1.6;}
+table{width:100%;border-collapse:collapse;margin:0.6rem 0;font-size:0.85rem;}
+th{background:var(--primary);color:white;padding:0.5rem 0.7rem;text-align:center;font-weight:600;font-size:0.75rem;}
+td{padding:0.4rem 0.7rem;text-align:center;border:1px solid var(--border-light);}
+tr:nth-child(even){background:rgba(124,58,237,0.02);}
+.info-box{background:rgba(6,182,212,0.05);border-left:4px solid var(--accent-cyan);padding:0.7rem 1rem;border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.warning-box{background:rgba(245,158,11,0.05);border-left:4px solid var(--accent-orange);padding:0.7rem 1rem;border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.success-box{background:rgba(16,185,129,0.05);border-left:4px solid var(--accent-green);padding:0.7rem 1rem;border-radius:0 10px 10px 0;margin:0.5rem 0;font-size:0.85rem;}
+.result-highlight{font-family:'Fira Code';background:rgba(124,58,237,0.08);padding:0.12rem 0.4rem;border-radius:5px;font-weight:600;color:var(--accent-purple);}
+.hero-title{font-family:'Outfit';font-weight:900;font-size:2.5rem;line-height:1.1;color:var(--text-main);letter-spacing:-0.03em;}
+.hero-title .accent{background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-subtitle{font-size:1rem;color:var(--text-muted);max-width:700px;margin:0.8rem auto;line-height:1.6;}
+.text-center{text-align:center;}
+.text-small{font-size:0.8rem;color:var(--text-muted);}
+.mt-1{margin-top:0.5rem;}.mt-2{margin-top:1rem;}.mb-1{margin-bottom:0.5rem;}.mb-2{margin-bottom:1rem;}
+nav{position:fixed;bottom:0;left:0;right:0;height:48px;background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);border-top:2px solid rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;gap:1rem;z-index:100;padding:0 1.5rem;}
+nav button{background:var(--primary);color:white;border:none;padding:0.35rem 1rem;border-radius:8px;cursor:pointer;font-family:'Inter';font-weight:600;font-size:0.75rem;transition:all 0.2s;}
+nav button:hover{background:var(--primary-dark);}
+nav button:disabled{opacity:0.3;cursor:default;}
+nav .page-indicator{font-family:'Fira Code';font-size:0.8rem;color:var(--text-muted);}
+nav .progress-bar{width:180px;height:5px;background:var(--border-light);border-radius:3px;overflow:hidden;}
+nav .progress-fill{height:100%;background:var(--primary);border-radius:3px;transition:width 0.3s;}
+@media(max-width:768px){.slide{padding:0.6rem 0.8rem;}.grid-2,.grid-3{grid-template-columns:1fr;}}
+</style></head><body>
+<header><div style="justify-self:start"></div><div class="header-center"><span class="logo">Classification Non Supervisee</span><span class="logo-sub">REVISION EXAMEN — SUPCOM DOCTORAT 2026</span></div><div style="justify-self:end;font-size:0.75rem;color:var(--text-muted);">M. Riadh ABDELFATTAH</div></header>
+<div id="slide-container">
+"""
+
+FOOTER = """</div>
+<nav><button onclick="prevSlide()" id="btn-prev">← Slide precedent</button>
+<div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+<span class="page-indicator"><span id="current-slide">1</span> / <span id="total-slides">N</span></span>
+<button onclick="nextSlide()" id="btn-next">Slide suivant →</button></nav>
+<script>const slides=document.querySelectorAll('.slide');const totalSlides=slides.length;let currentSlide=0;
+document.getElementById('total-slides').textContent=totalSlides;
+function updateSlide(){slides.forEach((s,i)=>{s.classList.remove('active','prev');if(i===currentSlide)s.classList.add('active');else if(i<currentSlide)s.classList.add('prev');});document.getElementById('current-slide').textContent=currentSlide+1;document.getElementById('progress-fill').style.width=((currentSlide+1)/totalSlides*100)+'%';document.getElementById('btn-prev').disabled=currentSlide===0;document.getElementById('btn-next').disabled=currentSlide===totalSlides-1;}
+function nextSlide(){if(currentSlide<totalSlides-1){currentSlide++;updateSlide();}}
+function prevSlide(){if(currentSlide>0){currentSlide--;updateSlide();}}
+document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();nextSlide();}else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prevSlide();}});updateSlide();</script></body></html>"""
+
+def badge(t, text=""):
+    m = {"exo":"exo","correction":"correction","cah":"cah","kmeans":"kmeans","acp":"acp","inertie":"inertie"}
+    return f'<span class="section-badge {m.get(t,"")}">{text or t.upper()}</span>'
+
+def level(l):
+    lm = {"Facile":"level-easy","Moyen":"level-medium"}
+    return f'<span class="level-badge {lm.get(l,'level-medium')}">{l.upper()}</span>'
+
+def slide(content):
+    sid[0] += 1
+    return f'<div class="slide" id="s{sid[0]}"><div class="content-single">{content}</div></div>\n'
+
+def add(content):
+    S.append(slide(content))
+
+def exo_header(num, topic, title, lev):
+    return f"""<div class="slide-header">{badge(topic)}{badge("exo","EXERCICE")}{level(lev)}<div class="slide-title">Exercice {num} — {title}</div></div>"""
+
+def corr_header(num, topic, title):
+    return f"""<div class="slide-header">{badge(topic)}{badge("correction","CORRECTION")}<div class="slide-title">Correction {num} — {title}</div></div>"""
+
+# ============== TITLE & TOC ==============
+add("""<div class="text-center">
+<div class="hero-title">Revision <span class="accent">Non Supervisee</span></div>
+<div class="hero-subtitle">CAH • K-means • ACP • Barycentres & Inerties • Distances<br>30+ exercices corriges pas a pas</div>
+<div class="text-small mt-2">Base sur les annales SUPCOM 2021 & 2023 — M. Riadh ABDELFATTAH</div>
+</div>""")
+
+add(f"""<div class="slide-header">{badge("exo","PLAN")}<div class="slide-title">Sommaire</div></div>
+<div class="grid-3">
+<div class="card"><h3>Partie 1 — CAH</h3><p>8 exercices : single linkage, complete linkage, dendrogrammes, interpretation</p></div>
+<div class="card"><h3>Partie 2 — K-means</h3><p>6 exercices : centres initiaux, iterations, convergence, choix de K</p></div>
+<div class="card"><h3>Partie 3 — ACP</h3><p>7 exercices : matrice de covariance, valeurs propres, variance expliquee, interpretation</p></div>
+<div class="card"><h3>Partie 4 — Inerties/Barycentres</h3><p>6 exercices : barycentres, I<sub>T</sub>/I<sub>W</sub>/I<sub>B</sub>, Huygens</p></div>
+<div class="card"><h3>Partie 5 — Distances & Similarite</h3><p>4 exercices : euclidienne, Manhattan, normalisation</p></div>
+<div class="card"><h3>Partie 6 — QCM & Recaps</h3><p>Definitions, tableaux comparatifs, questions-type examen</p></div>
+</div>""")
+
+# ===================== CAH EXERCISES (8) =====================
+
+add(exo_header("1","cah","CAH — Saut minimum (3 points simples)","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : A(0,0), B(0,2), C(4,0), D(4,2).</p>
+<p><strong>1.</strong> Calculer les distances euclidiennes entre tous les points.</p>
+<p><strong>2.</strong> Appliquer la CAH avec <strong>saut minimum</strong> (single linkage).</p>
+<p><strong>3.</strong> Dessiner le dendrogramme.</p>
+</div>""")
+
+add(corr_header("1","cah","Saut minimum — 3 points simples") + """<div class="correction-box"><div class="corr-title">Resolution etape par etape</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Distances :</strong> d(A,B)=2, d(A,C)=4, d(A,D)=&radic;(16+4)=&radic;20&asymp;4.47, d(B,C)=&radic;(16+4)=4.47, d(B,D)=4, d(C,D)=2.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Initial :</strong> 4 clusters : {A}, {B}, {C}, {D}.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Iter 1 :</strong> d min = 2 (A-B et C-D). Plus petits indices → fusion <strong>{A,B}</strong>. Hauteur = <strong>2</strong>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Iter 2 :</strong> d({A,B},C)=min(4,4.47)=<strong>4</strong>. d({A,B},D)=min(4.47,4)=<strong>4</strong>. d(C,D)=<strong>2</strong> → fusion <strong>{C,D}</strong>. Hauteur = <strong>2</strong>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Iter 3 :</strong> d({A,B},{C,D})=min(4,4.47,4.47,4)=<strong>4</strong>. Fusion finale. Hauteur = <strong>4</strong>.</div></div>
+<div class="step-row"><div class="step-num">6</div><div class="step-text"><strong>Dendrogramme :</strong> Fusions a hauteur 2 pour A-B et C-D, puis fusion finale a hauteur 4.</div></div>
+</div>""")
+
+add(exo_header("2","cah","CAH — Saut minimum (type examen 2021)","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<table><tr><th></th><th>X1</th><th>X2</th></tr><tr><td>E1</td><td>-2</td><td>3</td></tr><tr><td>E2</td><td>-2</td><td>1</td></tr><tr><td>E3</td><td>-2</td><td>-1</td></tr><tr><td>E4</td><td>2</td><td>-1</td></tr><tr><td>E5</td><td>2</td><td>1</td></tr></table>
+<p class="mt-1">CAH avec saut minimum + distance euclidienne. En cas d'egalite, favoriser les plus petits indices.</p>
+</div>""")
+
+add(corr_header("2","cah","Saut minimum — Type examen 2021") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d(E1,E2)=2, d(E2,E3)=2, d(E4,E5)=2. d(E1,E3)=4, d(E1,E4)=&radic;32&asymp;5.66, d(E2,E5)=&radic;20&asymp;4.47, d(E3,E5)=&radic;20&asymp;4.47, d(E3,E4)=4.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Iter 1 :</strong> d min=2. Plus petits indices → fusion <strong>{E1,E2}</strong> a hauteur 2.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Iter 2 :</strong> d({E1,E2},E3)=min(4,2)=2. d(E4,E5)=2. Plus petits indices → fusion <strong>{E1,E2,E3}</strong> a hauteur 2.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Iter 3 :</strong> d({E1,E2,E3},E4)=min(5.66,4.47,4)=4. d({E1,E2,E3},E5)=min(4.47,4,4.47)=4. d(E4,E5)=2 → fusion <strong>{E4,E5}</strong> a hauteur 2.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>Iter 4 :</strong> Fusion finale a hauteur <strong>4</strong>. Resume : {E1,E2}@2, {E1,E2,E3}@2, {E4,E5}@2, tout@4.</div></div>
+</div>""" + """<div class='warning-box'><strong>Effet chaine :</strong> E2 sert de pont entre E1 et E3, permettant leur fusion rapide alors que E1 est loin de E3 (d=4).</div>""")
+
+add(exo_header("3","cah","CAH — Voisin le plus eloigne (complete linkage)","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Memes donnees que l'exercice 2. Appliquer la CAH avec <strong>voisin le plus eloigne</strong> (complete linkage).</p>
+</div>""")
+
+add(corr_header("3","cah","Complete linkage — Type examen 2021") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Memes distances initiales. Iter 1 : d min=2 → fusion <strong>{E1,E2}</strong> a hauteur 2 (complete = max pour les singletons, c'est pareil que single).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Iter 2 (complete) :</strong> d({E1,E2},E3)=max(4,2)=4. d(E4,E5)=2 → fusion <strong>{E4,E5}</strong> a hauteur 2 (et NON E3 avec {E1,E2} car 4 > 2).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Iter 3 :</strong> d({E1,E2},E3)=4. d({E4,E5},E3)=max(4,4.47)=4.47. d({E1,E2},{E4,E5})=max(5.66,4.47,4.47,4)=5.66. Min=4 → fusion <strong>{E1,E2,E3}</strong> a hauteur 4.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Iter 4 :</strong> d({E1,E2,E3},{E4,E5})=max(...)=5.66. Fusion finale a hauteur <strong>&radic;32&asymp;5.66</strong>.</div></div>
+</div>""" + """<div class='success-box'><strong>Difference cle :</strong> Complete linkage fusionne {E4,E5} avant d'integrer E3 au groupe gauche (hauteur 4 au lieu de 2). La fusion finale est plus haute (5.66 vs 4).</div>""")
+
+add(exo_header("4","cah","CAH — Comparaison single vs complete","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Quel linkage produit des groupes plus compacts ? Pourquoi ?</p>
+<p><strong>2.</strong> Lequel est sensible a l'effet chaine ?</p>
+<p><strong>3.</strong> Lequel a une hauteur de fusion finale plus elevee ?</p>
+</div>""")
+
+add(corr_header("4","cah","Comparaison single vs complete") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Complete linkage</strong> produit des groupes plus compacts. Il exige que TOUS les points de deux clusters soient proches, ce qui empeche un point isole de rejoindre un groupe compact.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Single linkage</strong> est sensible a l'effet chaine : un seul couple de points proches suffit a fusionner deux clusters, meme si d'autres points sont eloignes.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Complete linkage</strong> a une hauteur finale plus elevee (5.66 vs 4 dans l'exemple) car il est plus exigeant.</div></div>
+</div>""")
+
+add(exo_header("5","cah","Dendrogramme — Interpretation","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Un dendrogramme montre 3 fusions : {A,B} a h=1, {C,D} a h=1.5, {{A,B},{C,D}} a h=5.</p>
+<p><strong>1.</strong> Combien de clusters suggere une coupure a h=2 ?</p>
+<p><strong>2.</strong> Et a h=3 ?</p>
+<p><strong>3.</strong> Quel est le nombre de clusters optimal ?</p>
+</div>""")
+
+add(corr_header("5","cah","Interpretation du dendrogramme") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">A h=2, les groupes {A,B} (fusion a 1<2) et {C,D} (fusion a 1.5<2) existent mais ne sont pas encore fusionnes. Donc <span class='result-highlight'>2 clusters</span> : {A,B} et {C,D}.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">A h=3, meme situation : 2 clusters. La fusion a h=5 n'est pas encore faite.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Le saut de hauteur entre 1.5 et 5 est grand (3.5), ce qui suggere que <span class='result-highlight'>2 clusters</span> est optimal. On coupe la ou le saut est le plus grand.</div></div>
+</div>""")
+
+add(exo_header("6","cah","CAH — Single linkage avec 4 points","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : P1(0,0), P2(1,0), P3(0,3), P4(1,3).</p>
+<p>Appliquer la CAH avec single linkage. Distances : d(P1,P2)=1, d(P3,P4)=1, d(P1,P3)=3, d(P2,P4)=&radic;10&asymp;3.16.</p>
+</div>""")
+
+add(corr_header("6","cah","Single linkage — 4 points en 2 paires") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Iter 1 :</strong> d min=1. Deux paires : {P1,P2} et {P3,P4}. On commence par <strong>{P1,P2}</strong> a hauteur 1 (plus petits indices). Puis <strong>{P3,P4}</strong> a hauteur 1.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Iter 2 :</strong> d({P1,P2},{P3,P4})=min(3,3.16,3,3.16)=<strong>3</strong>. Fusion finale a hauteur 3.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Dendrogramme : deux paires se forment a h=1, puis fusion finale a h=3.</div></div>
+</div>""")
+
+add(exo_header("7","cah","CAH — Effet chaine (illustration)","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>3 points alignes : Q1(0,0), Q2(1,0), Q3(10,0).</p>
+<p><strong>1.</strong> CAH single linkage : a quelle hauteur Q3 rejoint-il {Q1,Q2} ?</p>
+<p><strong>2.</strong> Cet exemple illustre quel phenomene ?</p>
+</div>""")
+
+add(corr_header("7","cah","Effet chaine") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d(Q1,Q2)=1 → fusion a h=1. d({Q1,Q2},Q3)=min(10,9)=<strong>9</strong>. Q3 rejoint le groupe a hauteur <span class='result-highlight'>9</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Avec complete linkage : d({Q1,Q2},Q3)=max(10,9)=<strong>10</strong>. La hauteur est plus elevee (10 vs 9). En single, Q2 sert de pont reduisant la distance a Q3. C'est <strong>l'effet chaine</strong> : un point intermediaire rapproche artificiellement deux groupes eloignes.</div></div>
+</div>""")
+
+add(exo_header("8","cah","CAH — QCM definitions","Facile") + """<div class="exo-box"><div class="exo-title">Vrai ou Faux</div>
+<p>1. La CAH est une methode de classification supervisee.</p>
+<p>2. Le dendrogramme represente les fusions successives.</p>
+<p>3. Le complete linkage utilise la distance minimale.</p>
+<p>4. La hauteur de fusion indique la distance a laquelle deux clusters fusionnent.</p>
+<p>5. On peut couper le dendrogramme a n'importe quelle hauteur pour obtenir un nombre de clusters.</p>
+</div>""")
+
+add(corr_header("8","cah","QCM definitions") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>FAUX.</strong> La CAH est non supervisee : on n'a pas de labels/classes predefinis.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>VRAI.</strong> Le dendrogramme visualise l'historique des fusions avec leurs hauteurs.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>FAUX.</strong> Complete linkage utilise la distance MAXIMALE. Single linkage utilise la distance minimale.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>VRAI.</strong> La hauteur de fusion est la distance (single/complete/...) entre les deux clusters au moment de leur fusion.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>VRAI.</strong> Couper le dendrogramme a une hauteur h donne les clusters formes avant cette hauteur.</div></div>
+</div>""")
+
+# ===================== K-MEANS EXERCISES (6) =====================
+
+add(exo_header("9","kmeans","K-means — 1 iteration complete","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : A(1,1), B(1,3), C(3,1), D(5,5). Centres initiaux : M1=A(1,1), M2=D(5,5).</p>
+<p><strong>1.</strong> Affecter chaque point au centre le plus proche (iteration 1).</p>
+<p><strong>2.</strong> Recalculer les centres (fin iteration 1).</p>
+</div>""")
+
+add(corr_header("9","kmeans","K-means — 1 iteration") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Distances a M1(1,1) :</strong> d(A)=0, d(B)=2, d(C)=2, d(D)=&radic;(16+16)=&radic;32&asymp;5.66. <strong>Distances a M2(5,5) :</strong> d(A)=5.66, d(B)=&radic;(16+4)=&radic;20&asymp;4.47, d(C)=&radic;(4+16)=4.47, d(D)=0.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Affectation :</strong> A,B,C → Cluster 1 (M1), D → Cluster 2 (M2).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Nouveaux centres :</strong> M1' = moyenne(A,B,C) = ((1+1+3)/3, (1+3+1)/3) = <span class='result-highlight'>(5/3, 5/3) &asymp; (1.67, 1.67)</span>. M2' = D = <span class='result-highlight'>(5, 5)</span> (inchange).</div></div>
+</div>""")
+
+add(exo_header("10","kmeans","K-means — Convergence","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Suite de l'exercice 9. Les nouveaux centres M1'=(1.67, 1.67) et M2'=(5,5).</p>
+<p><strong>1.</strong> Re-affecter les points (iteration 2).</p>
+<p><strong>2.</strong> L'algorithme a-t-il converge ?</p>
+</div>""")
+
+add(corr_header("10","kmeans","K-means — Convergence") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d(B, M1')=&radic;(0.44+1.78)=&radic;2.22&asymp;1.49, d(B, M2')=4.47 → B reste cluster 1. d(C, M1')=1.49, d(C, M2')=4.47 → C reste cluster 1. Affectation inchangee.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">L'affectation n'a pas change → les centres restent identiques → <span class='result-highlight'>l'algorithme a converge</span> en 1 iteration.</div></div>
+</div>""")
+
+add(exo_header("11","kmeans","Choix de K — Methode du coude","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<table><tr><th>K</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr><tr><td>Inertie</td><td>100</td><td>45</td><td>30</td><td>25</td><td>22</td></tr></table>
+<p class="mt-1"><strong>1.</strong> Que represente l'inertie intra-classe ?</p>
+<p><strong>2.</strong> Quel K la methode du coude suggere-t-elle ?</p>
+</div>""")
+
+add(corr_header("11","kmeans","Methode du coude") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">L'inertie intra-classe = somme des carres des distances de chaque point a son centre. Elle mesure la <strong>compacite</strong> des clusters. Plus elle est petite, plus les points sont proches de leurs centres.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Gains : K1→2 : -55, K2→3 : -15, K3→4 : -5, K4→5 : -3. Le <strong>coude</strong> est a <span class='result-highlight'>K=2</span> (fort gain de 55, puis gains faibles). K=2 est le bon compromis.</div></div>
+</div>""")
+
+add(exo_header("12","kmeans","K-means — Sensible a l'initialisation","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p><strong>1.</strong> Pourquoi K-means est-il sensible aux centres initiaux ?</p>
+<p><strong>2.</strong> Comment remedier a ce probleme ?</p>
+<p><strong>3.</strong> K-means peut-il converger vers un minimum local ?</p>
+</div>""")
+
+add(corr_header("12","kmeans","Sensibilite a l'initialisation") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">K-means est un algorithme <strong>iteratif de descente</strong> qui converge vers le minimum le plus proche des centres initiaux. Des centres initiaux mal choisis menent a une mauvaise partition.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Solutions : <strong>K-means++</strong> (initialisation intelligente qui espace les centres), lancer l'algorithme <strong>plusieurs fois</strong> avec des initialisations differentes et garder la meilleure partition (inertie minimale).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Oui.</strong> K-means garantit la convergence vers un <strong>minimum local</strong>, pas forcement global. D'ou l'importance de multiples initialisations.</div></div>
+</div>""")
+
+add(exo_header("13","kmeans","K-means — Proprietes QCM","Facile") + """<div class="exo-box"><div class="exo-title">Vrai ou Faux</div>
+<p>1. K-means est une methode de classification supervisee.</p>
+<p>2. Le nombre K de clusters doit etre fixe a l'avance.</p>
+<p>3. K-means fonctionne bien sur des clusters de forme quelconque.</p>
+<p>4. K-means minimise l'inertie inter-classe.</p>
+<p>5. L'algorithme converge toujours en un nombre fini d'iterations.</p>
+</div>""")
+
+add(corr_header("13","kmeans","Proprietes QCM") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>FAUX.</strong> Non supervise : pas de labels.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>VRAI.</strong> K est un hyperparametre a choisir avant execution.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>FAUX.</strong> K-means est bon pour des clusters <strong>spheriques et compacts</strong>. Pour des formes complexes (anneaux, spirales), preferer DBSCAN ou CAH.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>FAUX.</strong> K-means minimise l'inertie INTRA-classe (compacite interne).</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>VRAI.</strong> Le nombre de partitions possibles est fini, et chaque iteration reduit l'inertie. Convergence garantie en un nombre fini de pas.</div></div>
+</div>""")
+
+add(exo_header("14","kmeans","K-means — Calcul complet 2 clusters","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : P1(0,0), P2(0,2), P3(4,2), P4(4,0). K=2, centres initiaux : C1(0,0), C2(4,0).</p>
+<p><strong>1.</strong> Affectation iteration 1.</p>
+<p><strong>2.</strong> Nouveaux centres.</p>
+<p><strong>3.</strong> Inertie intra-classe finale.</p>
+</div>""")
+
+add(corr_header("14","kmeans","Calcul complet") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d(P1,C1)=0, d(P2,C1)=2, d(P3,C1)=&radic;20&asymp;4.47, d(P4,C1)=4. d(P1,C2)=4, d(P2,C2)=&radic;20&asymp;4.47, d(P3,C2)=2, d(P4,C2)=0. Affectation : <strong>P1,P2→C1, P3,P4→C2</strong>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">C1'=((0+0)/2,(0+2)/2)=<strong>(0,1)</strong>. C2'=((4+4)/2,(2+0)/2)=<strong>(4,1)</strong>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Inertie = d(P1,C1')<sup>2</sup>+d(P2,C1')<sup>2</sup>+d(P3,C2')<sup>2</sup>+d(P4,C2')<sup>2</sup> = (0+1)+(0+1)+(0+1)+(0+1) = <span class='result-highlight'>4</span>.</div></div>
+</div>""")
+
+# ===================== ACP EXERCISES (7) =====================
+
+add(exo_header("15","acp","ACP — Covariance et valeurs propres (type 2023)","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : E1(1,2), E2(2,3), E3(3,4).</p>
+<p>1. Centrer les donnees. 2. Calculer la matrice de covariance. 3. Calculer valeurs propres et % variance expliquee.</p>
+</div>""")
+
+add(corr_header("15","acp","ACP type examen 2023") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Centrage :</strong> M(X1)=2, M(X2)=3. Centres : (-1,-1), (0,0), (1,1).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Covariance (1/n) :</strong> Var(X1)=2/3, Var(X2)=2/3, Cov(X1,X2)=2/3. &Sigma; = [[2/3, 2/3], [2/3, 2/3]].</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Valeurs propres :</strong> det(&Sigma;-&lambda;I)=0 → &lambda;<sup>2</sup>-4/3&lambda;=0 → <span class='result-highlight'>&lambda;<sub>1</sub>=4/3, &lambda;<sub>2</sub>=0</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>Variance expliquee :</strong> CP1=100%, CP2=0%. Une seule CP suffit car les variables sont <strong>parfaitement correlees</strong> (X2=X1+1).</div></div>
+</div>""")
+
+add(exo_header("16","acp","ACP — Donnees non correlees","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points centres : A(-2,0), B(2,0), C(0,-1), D(0,1).</p>
+<p>1. Calculer la matrice de covariance. 2. Que remarquez-vous ? 3. Variance expliquee par chaque CP ?</p>
+</div>""")
+
+add(corr_header("16","acp","ACP — Donnees non correlees") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Var(X1)=(4+4+0+0)/4=2. Var(X2)=(0+0+1+1)/4=0.5. Cov=0 (car X1 et X2 sont non correlees : X1 grand n'implique pas X2 grand).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">&Sigma; = [[2, 0], [0, 0.5]]. La covariance est <strong>diagonale</strong> — les variables sont deja decorrelees. Les CP sont directement les axes X1 et X2.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">CP1 = 2/(2+0.5) = <span class='result-highlight'>80%</span> (axe X1). CP2 = 0.5/2.5 = <span class='result-highlight'>20%</span> (axe X2).</div></div>
+</div>""")
+
+add(exo_header("17","acp","ACP — Choix du nombre de composantes","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<table><tr><th>CP</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr><tr><td>Val. propre</td><td>50</td><td>30</td><td>12</td><td>5</td><td>3</td></tr></table>
+<p class="mt-1">1. % variance par CP. 2. Combien de CP garder (critere 80%) ? 3. Critere de Kaiser ?</p>
+</div>""")
+
+add(corr_header("17","acp","Choix du nombre de CP") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Total=100. CP1=50%, CP2=30%, CP3=12%, CP4=5%, CP5=3%.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Cumul :</strong> CP1=50%, CP1+2=80%, CP1+2+3=92%. Pour 80% → <span class='result-highlight'>2 CP</span> suffisent.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Critere de Kaiser :</strong> garder les CP avec &lambda; > moyenne. Moyenne=100/5=20. &lambda;>20 : CP1 (50) et CP2 (30). Donc <span class='result-highlight'>2 CP aussi</span>. Les deux criteres concordent.</div></div>
+</div>""")
+
+add(exo_header("18","acp","ACP — Interpretation des correlations","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>ACP sur 3 variables (Taille, Poids, Age). Matrice de correlations variables-CP :</p>
+<table><tr><th></th><th>CP1</th><th>CP2</th></tr><tr><td>Taille</td><td>0.92</td><td>-0.10</td></tr><tr><td>Poids</td><td>0.89</td><td>0.15</td></tr><tr><td>Age</td><td>0.05</td><td>0.95</td></tr></table>
+<p class="mt-1">1. Que represente CP1 ? 2. CP2 ? 3. Taille et Poids sont-ils correles ?</p>
+</div>""")
+
+add(corr_header("18","acp","Interpretation des correlations") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>CP1</strong> est fortement correlee a Taille (0.92) et Poids (0.89). Elle represente la <strong>corpulence globale</strong> (taille+poids ensemble). Un score CP1 eleve = personne grande et lourde.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>CP2</strong> est correlee a l'Age (0.95) et peu a Taille/Poids. Elle represente <strong>l'age</strong> independamment de la corpulence.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>Oui</strong>, Taille et Poids sont correles (0.92 et 0.89 sur CP1, quasi nuls sur CP2). Ils varient ensemble : les personnes plus grandes sont tendanciellement plus lourdes.</div></div>
+</div>""")
+
+add(exo_header("19","acp","ACP — Scores des individus","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Donnees centrees de l'exercice 15 : E1(-1,-1), E2(0,0), E3(1,1). CP1 = (1/&radic;2, 1/&radic;2).</p>
+<p>Calculer les scores des 3 individus sur CP1. Ordonner les individus.</p>
+</div>""")
+
+add(corr_header("19","acp","Scores des individus") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Score = projection sur CP1 = u<sub>1</sub>&middot;x<sub>i</sub>'. E1 : (1/&radic;2,1/&radic;2)&middot;(-1,-1) = -2/&radic;2 = <span class='result-highlight'>-&radic;2 &asymp; -1.41</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">E2 : (1/&radic;2,1/&radic;2)&middot;(0,0) = <span class='result-highlight'>0</span>. E3 : (1/&radic;2,1/&radic;2)&middot;(1,1) = 2/&radic;2 = <span class='result-highlight'>+&radic;2 &asymp; +1.41</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Ordre croissant : <span class='result-highlight'>E1 < E2 < E3</span>. E1 a les valeurs les plus faibles, E3 les plus elevees.</div></div>
+</div>""")
+
+add(exo_header("20","acp","ACP — Projection et qualite de representation","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Valeurs propres : &lambda;<sub>1</sub>=8, &lambda;<sub>2</sub>=1.5, &lambda;<sub>3</sub>=0.5 (3 variables).</p>
+<p>1. Si on garde 2 CP, quel % d'information conserve-t-on ?</p>
+<p>2. La 3e variable est-elle bien representee si sa communaute avec CP1 et CP2 vaut 0.9 ?</p>
+</div>""")
+
+add(corr_header("20","acp","Qualite de representation") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">Total=8+1.5+0.5=10. Avec 2 CP : (8+1.5)/10 = <span class='result-highlight'>95%</span> de l'information conservee. Excellente compression.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">Communaute = somme des correlations au carre avec les CP retenues. 0.9 signifie que <span class='result-highlight'>90%</span> de la variance de cette variable est expliquee par CP1 et CP2. La variable est <strong>tres bien representee</strong> dans le plan CP1-CP2.</div></div>
+</div>""")
+
+add(exo_header("21","acp","ACP — QCM definitions","Facile") + """<div class="exo-box"><div class="exo-title">Vrai ou Faux</div>
+<p>1. L'ACP est une methode de classification.</p><p>2. La 1ere CP capture le maximum de variance.</p><p>3. Les CP sont correlees entre elles.</p><p>4. L'ACP necessite de centrer les donnees.</p><p>5. Une valeur propre = inertie portee par la CP.</p>
+</div>""")
+
+add(corr_header("21","acp","ACP QCM") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>FAUX.</strong> C'est une methode de <strong>reduction de dimension</strong>, pas de classification (on ne cree pas de groupes).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>VRAI.</strong> Par construction, CP1 maximise la variance projetee.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>FAUX.</strong> Les CP sont <strong>orthogonales</strong> (non correlees). Cov(CP<sub>i</sub>, CP<sub>j</sub>)=0 pour i&ne;j.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>VRAI.</strong> On centre les donnees (soustraire la moyenne) pour que l'origine corresponde au barycentre.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text"><strong>VRAI.</strong> &lambda;<sub>k</sub> = inertie (variance) projetee sur CP<sub>k</sub>. La somme des &lambda; = inertie totale.</div></div>
+</div>""")
+
+# ===================== BARYCENTRES/INERTIES (6) =====================
+
+add(exo_header("22","inertie","Barycentres et inerties (type 2023)","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points SVM 2023 : X1(-3,1) y=-1, X2(3,0) y=+1, X3(1,-3) y=-1, X4(0,3) y=+1.</p>
+<p>1. Calculer G, G<sub>-</sub>, G<sub>+</sub>. 2. Calculer I<sub>T</sub>, I<sub>W</sub>, I<sub>B</sub>. 3. Verifier Huygens.</p>
+</div>""")
+
+add(corr_header("22","inertie","Barycentres et Huygens — type 2023") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">G=(((-3)+3+1+0)/4, (1+0-3+3)/4)=(1/4,1/4)=<span class='result-highlight'>(0.25, 0.25)</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">G<sub>-</sub>=moy(X1,X3)=(-1,-1). G<sub>+</sub>=moy(X2,X4)=(1.5,1.5).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">I<sub>T</sub>=&Sigma;||X<sub>i</sub>-G||<sup>2</sup>=11.125+7.625+11.125+7.625=<span class='result-highlight'>37.5</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">I<sub>W</sub>=(||X1-G<sub>-</sub>||<sup>2</sup>+||X3-G<sub>-</sub>||<sup>2</sup>)+(||X2-G<sub>+</sub>||<sup>2</sup>+||X4-G<sub>+</sub>||<sup>2</sup>)=16+9=<span class='result-highlight'>25</span>.</div></div>
+<div class="step-row"><div class="step-num">5</div><div class="step-text">I<sub>B</sub>=2||G<sub>-</sub>-G||<sup>2</sup>+2||G<sub>+</sub>-G||<sup>2</sup>=2&times;3.125+2&times;3.125=<span class='result-highlight'>12.5</span>. Huygens : 37.5=25+12.5 ✓</div></div>
+</div>""")
+
+add(exo_header("23","inertie","Barycentres — Calcul simple","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Classe A : 5 points de moyenne (2,3). Classe B : 3 points de moyenne (6,7).</p>
+<p>1. Barycentre global G. 2. Que vaut G si on pondere par les effectifs ?</p>
+</div>""")
+
+add(corr_header("23","inertie","Barycentres ponderes") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">G = (5&times;(2,3) + 3&times;(6,7)) / (5+3) = ((10+18)/8, (15+21)/8) = <span class='result-highlight'>(3.5, 4.5)</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">C'est exactement le calcul ci-dessus. Le barycentre global est la <strong>moyenne ponderee</strong> des barycentres de classe, ponderes par les effectifs.</div></div>
+</div>""")
+
+add(exo_header("24","inertie","Inertie totale — Calcul","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>3 points : P1(0,0), P2(2,0), P3(1,3). Calculer I<sub>T</sub> (inertie totale).</p>
+</div>""")
+
+add(corr_header("24","inertie","Inertie totale") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">G = ((0+2+1)/3, (0+0+3)/3) = <strong>(1, 1)</strong>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">I<sub>T</sub>=||(0,0)-(1,1)||<sup>2</sup>+||(2,0)-(1,1)||<sup>2</sup>+||(1,3)-(1,1)||<sup>2</sup>=(1+1)+(1+1)+(0+4)=2+2+4=<span class='result-highlight'>8</span>.</div></div>
+</div>""")
+
+add(exo_header("25","inertie","Decomposition de Huygens — Verification","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Suite exo 24 avec classes : C1={P1,P2}, C2={P3}.</p>
+<p>1. I<sub>W</sub> (intra-classe). 2. I<sub>B</sub> (inter-classe). 3. Verifier Huygens.</p>
+</div>""")
+
+add(corr_header("25","inertie","Decomposition de Huygens") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">G<sub>C1</sub>=(1,0), G<sub>C2</sub>=(1,3). I<sub>W</sub>=[(0-1)<sup>2</sup>+(0-0)<sup>2</sup>]+[(2-1)<sup>2</sup>+(0-0)<sup>2</sup>]+[(1-1)<sup>2</sup>+(3-3)<sup>2</sup>]=1+1+0=<span class='result-highlight'>2</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">I<sub>B</sub>=2&times;||(1,0)-(1,1)||<sup>2</sup>+1&times;||(1,3)-(1,1)||<sup>2</sup>=2&times;1+1&times;4=<span class='result-highlight'>6</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Huygens : I<sub>T</sub>=I<sub>W</sub>+I<sub>B</sub> → 8=2+6 ✓</div></div>
+</div>""")
+
+add(exo_header("26","inertie","Interpretation inerties","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Deux partitions : A : I<sub>W</sub>=10, I<sub>B</sub>=90. B : I<sub>W</sub>=50, I<sub>B</sub>=50. I<sub>T</sub>=100.</p>
+<p>Quelle partition est la meilleure ? Pourquoi ?</p>
+</div>""")
+
+add(corr_header("26","inertie","Interpretation inerties") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>Partition A :</strong> I<sub>W</sub>=10 (faible dispersion interne), I<sub>B</sub>=90 (forte separation). Les clusters sont <strong>compacts et bien separes</strong>. C'est la meilleure.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Partition B :</strong> I<sub>W</sub>=50, I<sub>B</sub>=50. Dispersion interne elevee, separation moderee. Moins bonne.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Critere : <span class='result-highlight'>maximiser I<sub>B</sub>/I<sub>T</sub></span> (ou minimiser I<sub>W</sub>/I<sub>T</sub>). A : 90%, B : 50%. A gagne.</div></div>
+</div>""")
+
+add(exo_header("27","inertie","QCM — Inerties et Huygens","Facile") + """<div class="exo-box"><div class="exo-title">Vrai ou Faux</div>
+<p>1. L'inertie totale ne depend pas du choix de partition.</p>
+<p>2. I<sub>W</sub> + I<sub>B</sub> = I<sub>T</sub> est le theoreme de Huygens.</p>
+<p>3. L'inertie intra-classe mesure la separation entre classes.</p>
+<p>4. Le barycentre global est la moyenne de tous les points.</p>
+</div>""")
+
+add(corr_header("27","inertie","QCM Inerties") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text"><strong>VRAI.</strong> I<sub>T</sub> est une propriete du nuage de points, independante de toute partition.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>VRAI.</strong> I<sub>T</sub> = I<sub>W</sub> + I<sub>B</sub>. C'est le theoreme de Huygens (decomposition de la variance).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>FAUX.</strong> I<sub>W</sub> mesure la <strong>compacite</strong> interne des classes. C'est I<sub>B</sub> qui mesure la separation.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text"><strong>VRAI.</strong> G = (1/n)&Sigma;x<sub>i</sub>. C'est la moyenne arithmetique de tous les points du nuage.</div></div>
+</div>""")
+
+# ===================== DISTANCES (4) =====================
+
+add(exo_header("28","inertie","Distances — Euclidienne vs Manhattan vs Chebyshev","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>A=(1,1), B=(4,5). Calculer : 1. d<sub>E</sub> 2. d<sub>M</sub> 3. d<sub>C</sub> (Chebyshev).</p>
+</div>""")
+
+add(corr_header("28","inertie","Distances") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d<sub>E</sub>=&radic;((4-1)<sup>2</sup>+(5-1)<sup>2</sup>)=&radic;(9+16)=<span class='result-highlight'>5</span>.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">d<sub>M</sub>=|4-1|+|5-1|=3+4=<span class='result-highlight'>7</span>.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">d<sub>C</sub>=max(|4-1|,|5-1|)=max(3,4)=<span class='result-highlight'>4</span>.</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Ordre : d<sub>C</sub>(4) < d<sub>E</sub>(5) < d<sub>M</sub>(7). Toujours : d<sub>C</sub> &le; d<sub>E</sub> &le; d<sub>M</sub>.</div></div>
+</div>""")
+
+add(exo_header("29","inertie","Distance — Proprietes","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>1. Citer les 3 proprietes d'une distance metrique.</p>
+<p>2. La similarite cosinus est-elle une distance ?</p>
+<p>3. Pourquoi normaliser avant de calculer des distances ?</p>
+</div>""")
+
+add(corr_header("29","inertie","Proprietes des distances") + """<div class="correction-box"><div class="corr-title">Correction</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">1. <strong>Symetrie :</strong> d(A,B)=d(B,A). 2. <strong>Separation :</strong> d(A,B)=0 &hArr; A=B. 3. <strong>Inegalite triangulaire :</strong> d(A,C) &le; d(A,B)+d(B,C).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text"><strong>Non.</strong> La similarite cosinus mesure l'angle, pas la distance. On peut la convertir : d<sub>cos</sub>=1-cos(A,B), qui est une distance.</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Sans normalisation, les variables a grande echelle <strong>dominent</strong> le calcul de distance. Ex : le poids (50-100 kg) ecraserait la taille (1.5-2 m) sans normalisation.</div></div>
+</div>""")
+
+add(exo_header("30","inertie","Distance — Plus proche voisin","Facile") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Reference R(0,0). Points : A(3,4), B(1,0), C(0,5), D(4,3).</p>
+<p>Quel est le plus proche de R selon d<sub>E</sub> ? d<sub>M</sub> ? d<sub>C</sub> ?</p>
+</div>""")
+
+add(corr_header("30","inertie","Plus proche voisin") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d<sub>E</sub> : A=5, B=1, C=5, D=5. Plus proche : <span class='result-highlight'>B</span> (1).</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">d<sub>M</sub> : A=7, B=1, C=5, D=7. Plus proche : <span class='result-highlight'>B</span> (1).</div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">d<sub>C</sub> : A=4, B=1, C=5, D=4. Plus proche : <span class='result-highlight'>B</span> (1).</div></div>
+<div class="step-row"><div class="step-num">4</div><div class="step-text">Ici toutes les distances designent B comme plus proche. Mais l'ordre des autres points peut varier selon la distance choisie.</div></div>
+</div>""")
+
+add(exo_header("31","inertie","Distances et clustering","Moyen") + """<div class="exo-box"><div class="exo-title">Enonce</div>
+<p>Points : P1(0,0), P2(0,2), P3(2,0), P4(2,2).</p>
+<p>1. Avec d<sub>E</sub>, quels points sont les plus proches ?</p>
+<p>2. Avec d<sub>M</sub>, meme question. 3. Cela affecte-t-il la CAH single linkage ?</p>
+</div>""")
+
+add(corr_header("31","inertie","Distances et clustering") + """<div class="correction-box"><div class="corr-title">Resolution</div>
+<div class="step-row"><div class="step-num">1</div><div class="step-text">d<sub>E</sub> : d(P1,P2)=2, d(P1,P3)=2, d(P1,P4)=&radic;8&asymp;2.83. P1-P2 et P1-P3 sont equidistants.</div></div>
+<div class="step-row"><div class="step-num">2</div><div class="step-text">d<sub>M</sub> : d(P1,P2)=2, d(P1,P3)=2, d(P2,P4)=2, d(P3,P4)=2. <strong>Quatre paires sont a distance 2.</strong></div></div>
+<div class="step-row"><div class="step-num">3</div><div class="step-text">Oui, le choix de la distance peut changer l'ordre des fusions en cas d'egalite, et donc <strong>potentiellement modifier le dendrogramme</strong>. En pratique, pour des donnees bien separees, l'impact est faible.</div></div>
+</div>""")
+
+# ===================== THEORY & RECAPS =====================
+
+add("""<div class="slide-header"><span class="section-badge cah">THEORIE CAH</span><div class="slide-title">CAH — Points essentiels</div></div>
+<div class="grid-2">
+<div class="card"><h3>Principe</h3><p>Partir de n clusters (chaque point). Fusionner iterativement les 2 plus proches. S'arreter quand il ne reste qu'un cluster. Resultat : <strong>dendrogramme</strong>.</p></div>
+<div class="card"><h3>Single vs Complete</h3><p><strong>Single (saut minimum) :</strong> d(C<sub>A</sub>,C<sub>B</sub>)=min d(x,y). Effet chaine. <strong>Complete (voisin eloigne) :</strong> d(C<sub>A</sub>,C<sub>B</sub>)=max d(x,y). Groupes compacts.</p></div>
+<div class="card"><h3>Dendrogramme</h3><p>Arbre binaire des fusions. Hauteur = distance a laquelle les clusters fusionnent. Couper a une hauteur h donne la partition a ce niveau.</p></div>
+<div class="card"><h3>Proprietes</h3><p>Non parametrique. Deterministe. Pas besoin de fixer K a l'avance. Complexite O(n<sup>3</sup>) naive, O(n<sup>2</sup> log n) optimisee.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge kmeans">THEORIE K-MEANS</span><div class="slide-title">K-means — Points essentiels</div></div>
+<div class="grid-2">
+<div class="card"><h3>Algorithme</h3><p>1. Choisir K centres initiaux. 2. Affecter chaque point au centre le plus proche. 3. Recalculer les centres (barycentres). 4. Repeter 2-3 jusqu'a convergence.</p></div>
+<div class="card"><h3>Convergence</h3><p>Garantie en un nombre fini d'iterations. Converge vers un <strong>minimum local</strong>. Lancer plusieurs fois (K-means++).</p></div>
+<div class="card"><h3>K optimal</h3><p>Methode du <strong>coude</strong> : tracer inertie vs K, choisir K au coude. Methode de la <strong>silhouette</strong> : maximiser le coefficient moyen.</p></div>
+<div class="card"><h3>Limites</h3><p>K doit etre fixe. Sensible a l'initialisation. Suppose des clusters spheriques. Sensible aux outliers.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge acp">THEORIE ACP</span><div class="slide-title">ACP — Points essentiels</div></div>
+<div class="grid-2">
+<div class="card"><h3>Objectif</h3><p>Reduire la dimension en projetant sur des axes (<strong>composantes principales</strong>) qui capturent le maximum de variance. Non supervise.</p></div>
+<div class="card"><h3>Etapes</h3><p>1. Centrer les donnees. 2. Matrice de covariance. 3. Diagonaliser : valeurs propres &lambda; et vecteurs propres u. 4. Trier par &lambda; decroissant. 5. Variance expliquee = &lambda;<sub>k</sub>/&Sigma;&lambda;.</p></div>
+<div class="card"><h3>Choix du nombre</h3><p><strong>Kaiser :</strong> garder &lambda;<sub>k</sub> > moyenne. <strong>Coude :</strong> chercher un coude dans le graphe des &lambda;. <strong>Seuil :</strong> cumul > 80%.</p></div>
+<div class="card"><h3>Interpretation</h3><p>Correlation variable-CP = u<sub>jk</sub>&radic;&lambda;<sub>k</sub>/&sigma;<sub>j</sub>. Score = projection. Cercle des correlations.</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge inertie">FORMULES CLES</span><div class="slide-title">Formules a memoriser</div></div>
+<div class="grid-2">
+<div class="formula-box"><div class="title">Barycentres</div><p>G = (1/n)&Sigma;x<sub>i</sub> (global)<br>G<sub>k</sub> = (1/n<sub>k</sub>)&Sigma;<sub>i&isin;k</sub>x<sub>i</sub> (par classe)</p></div>
+<div class="formula-box"><div class="title">Inerties</div><p>I<sub>T</sub> = &Sigma;||x<sub>i</sub>-G||<sup>2</sup><br>I<sub>W</sub> = &Sigma;<sub>k</sub>&Sigma;<sub>i&isin;k</sub>||x<sub>i</sub>-G<sub>k</sub>||<sup>2</sup><br>I<sub>B</sub> = &Sigma;<sub>k</sub>n<sub>k</sub>||G<sub>k</sub>-G||<sup>2</sup></p></div>
+<div class="formula-box"><div class="title">Huygens</div><p>I<sub>T</sub> = I<sub>W</sub> + I<sub>B</sub><br>Bon clustering : I<sub>W</sub> petit, I<sub>B</sub> grand</p></div>
+<div class="formula-box"><div class="title">ACP</div><p>&Sigma;u<sub>k</sub> = &lambda;<sub>k</sub>u<sub>k</sub><br>% var CP<sub>k</sub> = &lambda;<sub>k</sub>/&Sigma;&lambda;<sub>i</sub><br>Score = u<sub>k</sub>&middot;x'</p></div>
+</div>""")
+
+add("""<div class="slide-header"><span class="section-badge exo">QCM FINAL</span><div class="slide-title">Questions-type examen — Testez-vous !</div></div>
+<div class="grid-2">
+<div class="card"><h3>CAH</h3><p>1. Single linkage = min ou max ?<br>2. Complete linkage = groupes compacts ?<br>3. Dendrogramme = ?<br>4. CAH supervise ou non ?</p></div>
+<div class="card"><h3>K-means</h3><p>1. K fixe ou automatique ?<br>2. Sensible a l'init ?<br>3. Converge vers min global ?<br>4. Bon pour clusters spheriques ?</p></div>
+<div class="card"><h3>ACP</h3><p>1. Supervisee ou non ?<br>2. 1ere CP = max variance ?<br>3. CP correlees entre elles ?<br>4. Kaiser : &lambda; > ?</p></div>
+<div class="card"><h3>Inerties</h3><p>1. I<sub>T</sub> depend de la partition ?<br>2. I<sub>W</sub>+I<sub>B</sub>=I<sub>T</sub> ?<br>3. Bon clustering = I<sub>W</sub> ?<br>4. G = moyenne des G<sub>k</sub> ?</p></div>
+</div>
+<div class="success-box mt-2 text-center"><strong>Conseil examen :</strong> Les questions de cours (CAH, K-means, definitions) sont <strong>rapides et rentables</strong>. Les calculs d'inertie sont <strong>methodiques</strong> (meme demarche a chaque fois). L'ACP est <strong>tombee en 2023</strong>, la CAH en 2021 — les deux sont a reviser.</div>""")
+
+add("""<div class="text-center">
+<div class="slide-header"><span class="section-badge">RECAP</span><div class="slide-title">Comparaison methode exploratoire vs probabiliste</div></div>
+<table><tr><th>Aspect</th><th>Methodes exploratoires (CAH, K-means)</th><th>Methodes probabilistes (Melange gaussien)</th></tr>
+<tr><td>Base</td><td>Geometrique (distances)</td><td>Statistique (vraisemblance)</td></tr>
+<tr><td>Appartenance</td><td>Dure (un cluster)</td><td>Douce (probabiliste)</td></tr>
+<tr><td>Forme clusters</td><td>Spheriques (K-means)</td><td>Elliptiques (GMM)</td></tr>
+<tr><td>Parametres</td><td>Centres</td><td>Moyennes, covariances, proportions</td></tr>
+<tr><td>Modele</td><td>Non parametrique</td><td>Parametrique</td></tr>
+</table>
+</div>""")
+
+add("""<div class="text-center">
+<div class="hero-title">Bonne revision !</div>
+<div class="hero-subtitle">31 exercices corriges pas a pas<br>CAH (8) • K-means (6) • ACP (7) • Barycentres/Inerties (6) • Distances (4)<br>+ Fiches theoriques et QCM</div>
+<div class="mt-2"><span class="section-badge">Utilisez ← → ou Espace pour naviguer</span></div>
+<div class="text-small mt-2">Repo GitHub : <code>github.com/akiroussama/supcom-ia-doctorat</code><br>M. Riadh ABDELFATTAH — SUPCOM Doctorat 2026</div>
+</div>""")
+
+print(f"Total slides: {sid[0]}")
+print(f"Writing to {OUT}...")
+
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write(HEADER)
+    for s in S:
+        f.write(s)
+    f.write(FOOTER)
+
+print(f"Done! {sid[0]} slides written to {OUT}")
+print(f"File size: {OUT.stat().st_size / 1024:.1f} KB")
+
